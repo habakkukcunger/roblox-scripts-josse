@@ -62,9 +62,7 @@ R.Heartbeat:Connect(function()
         local r = LP.Character:FindFirstChild("HumanoidRootPart")
         if r then
             desyncFlip = not desyncFlip
-            -- Shifts your velocity packet back and forth instantly
-            -- Forces server replication to stutter and delay your position for others
-            r.Velocity = desyncFlip and Vector3.new(0, 0.05, 0) or Vector3.new(0, -0.05, 0)
+            r.Velocity = desyncFlip and Vector3.new(0, 5, 0) or Vector3.new(0, -5, 0)
         end
     end
 end)
