@@ -78,7 +78,7 @@ R.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- PREMIUM RAYFIELD-INSPIRED NATIVE UI (GUI)
+-- REPAIRED RAYFIELD-INSPIRED NATIVE UI (GUI)
 -- ==========================================
 local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "JosserpopsierRayMod"
@@ -86,7 +86,7 @@ UI.ResetOnSpawn = false
 
 -- Outer Frame Window
 local ShadowFrame = Instance.new("Frame", UI)
-ShadowFrame.Size = UDim2.new(0, 340, 0, 120) -- Reduced height now that the image is gone
+ShadowFrame.Size = UDim2.new(0, 340, 0, 120)
 ShadowFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
 ShadowFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 ShadowFrame.BackgroundTransparency = 0.4
@@ -103,6 +103,7 @@ MainFrame.Size = UDim2.new(1, -6, 1, -6)
 MainFrame.Position = UDim2.new(0, 3, 0, 3)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
 
 local MainCorner = Instance.new("UICorner", MainFrame)
 MainCorner.CornerRadius = UDim.new(0, 12)
@@ -112,6 +113,7 @@ local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 42)
 Header.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
 Header.BorderSizePixel = 0
+Header.Active = true
 
 local HeaderCorner = Instance.new("UICorner", Header)
 HeaderCorner.CornerRadius = UDim.new(0, 12)
@@ -141,6 +143,8 @@ CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 160)
 CloseBtn.TextSize = 22
 CloseBtn.Font = Enum.Font.GothamMedium
 CloseBtn.BackgroundTransparency = 1
+CloseBtn.Active = true
+CloseBtn.Selectable = true
 CloseBtn.MouseButton1Click:Connect(function() UI:Destroy() end)
 
 -- Minimalist Sidebar Navigation
@@ -160,6 +164,8 @@ TabBtn.Font = Enum.Font.GothamBold
 TabBtn.TextXAlignment = Enum.TextXAlignment.Left
 TabBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 42)
 TabBtn.BorderSizePixel = 0
+TabBtn.Active = true
+TabBtn.Selectable = true
 
 local TabBtnCorner = Instance.new("UICorner", TabBtn)
 TabBtnCorner.CornerRadius = UDim.new(0, 6)
@@ -176,6 +182,7 @@ ToggleContainer.Size = UDim2.new(1, 0, 0, 44)
 ToggleContainer.Position = UDim2.new(0, 0, 0, 6)
 ToggleContainer.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
 ToggleContainer.BorderSizePixel = 0
+ToggleContainer.Active = true
 
 local ToggleCorner = Instance.new("UICorner", ToggleContainer)
 ToggleCorner.CornerRadius = UDim.new(0, 8)
@@ -190,13 +197,15 @@ ToggleLabel.Font = Enum.Font.GothamMedium
 ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
 ToggleLabel.BackgroundTransparency = 1
 
--- The Pill-Shaped Switch Backplate Graphic
+-- FIXED HOVER/CLICK INTERACTION BACKPLATE BUTTON
 local SwitchBase = Instance.new("TextButton", ToggleContainer)
 SwitchBase.Size = UDim2.new(0, 36, 0, 20)
 SwitchBase.Position = UDim2.new(1, -48, 0, 12)
 SwitchBase.Text = ""
 SwitchBase.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 SwitchBase.BorderSizePixel = 0
+SwitchBase.Active = true       -- CRITICAL FOR MOBILE INTERACTION
+SwitchBase.Selectable = true   -- CRITICAL FOR MOBILE EXECUTION
 
 local BaseCorner = Instance.new("UICorner", SwitchBase)
 BaseCorner.CornerRadius = UDim.new(1, 0)
@@ -211,7 +220,7 @@ SwitchBall.BorderSizePixel = 0
 local BallCorner = Instance.new("UICorner", SwitchBall)
 BallCorner.CornerRadius = UDim.new(1, 0)
 
--- FIXED CLICK REGISTRATION LOGIC
+-- CLICK LISTENER EXECUTION
 SwitchBase.MouseButton1Click:Connect(function()
     ScriptEnabled = not ScriptEnabled
     if ScriptEnabled then
