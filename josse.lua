@@ -84,9 +84,9 @@ local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "JosserpopsierRayMod"
 UI.ResetOnSpawn = false
 
--- Outer Glow Shadow Simulation Frame
+-- Outer Frame Window
 local ShadowFrame = Instance.new("Frame", UI)
-ShadowFrame.Size = UDim2.new(0, 320, 0, 190)
+ShadowFrame.Size = UDim2.new(0, 340, 0, 120) -- Reduced height now that the image is gone
 ShadowFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
 ShadowFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 ShadowFrame.BackgroundTransparency = 0.4
@@ -116,7 +116,6 @@ Header.BorderSizePixel = 0
 local HeaderCorner = Instance.new("UICorner", Header)
 HeaderCorner.CornerRadius = UDim.new(0, 12)
 
--- Cover bottom rounded corners of the title header
 local HeaderFix = Instance.new("Frame", Header)
 HeaderFix.Size = UDim2.new(1, 0, 0, 10)
 HeaderFix.Position = UDim2.new(0, 0, 1, -10)
@@ -133,7 +132,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- Sleek Rayfield-style Close TextButton
+-- Close TextButton
 local CloseBtn = Instance.new("TextButton", Header)
 CloseBtn.Size = UDim2.new(0, 24, 0, 24)
 CloseBtn.Position = UDim2.new(1, -34, 0, 9)
@@ -144,7 +143,7 @@ CloseBtn.Font = Enum.Font.GothamMedium
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.MouseButton1Click:Connect(function() UI:Destroy() end)
 
--- Minimalist Sidebar Layout Navigation
+-- Minimalist Sidebar Navigation
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size = UDim2.new(0, 90, 1, -42)
 Sidebar.Position = UDim2.new(0, 0, 0, 42)
@@ -212,16 +211,14 @@ SwitchBall.BorderSizePixel = 0
 local BallCorner = Instance.new("UICorner", SwitchBall)
 BallCorner.CornerRadius = UDim.new(1, 0)
 
--- Core Interaction Event Logic
+-- FIXED CLICK REGISTRATION LOGIC
 SwitchBase.MouseButton1Click:Connect(function()
     ScriptEnabled = not ScriptEnabled
     if ScriptEnabled then
-        -- Smooth visual feedback animations (Turns green, slides right)
         SwitchBase:TweenBackgroundColor3(Color3.fromRGB(60, 180, 110), "Out", "Quad", 0.15, true)
         SwitchBall:TweenPosition(UDim2.new(0, 19, 0, 3), "Out", "Quad", 0.15, true)
         SwitchBall.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     else
-        -- Clear parameters and slide left (Turns dark grey)
         SwitchBase:TweenBackgroundColor3(Color3.fromRGB(45, 45, 55), "Out", "Quad", 0.15, true)
         SwitchBall:TweenPosition(UDim2.new(0, 3, 0, 3), "Out", "Quad", 0.15, true)
         SwitchBall.BackgroundColor3 = Color3.fromRGB(200, 200, 205)
