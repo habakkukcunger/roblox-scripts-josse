@@ -1,4 +1,4 @@
--- CLEAN SAFEGARD
+-- AUTOMATIC CACHE CLEANUP
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if PlayerGui:FindFirstChild("JosserpopsierV2") then PlayerGui.JosserpopsierV2:Destroy() end
 task.wait(0.1)
@@ -40,6 +40,7 @@ end
 if LP.Character then setup(LP.Character) end
 LP.CharacterAdded:Connect(setup)
 
+-- Auto Shiftlock Render System
 R.RenderStepped:Connect(function()
     local o = LP.Character
     local r = o and o:FindFirstChild("HumanoidRootPart")
@@ -54,11 +55,17 @@ R.RenderStepped:Connect(function()
     end
 end)
 
+-- MOBILE-SAFE DESYNC REPLICATION SYSTEM
+local desyncFlip = true
 R.Heartbeat:Connect(function()
-    if DesyncEnabled and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        sethiddenproperty(game:GetService("Providers"):FindFirstChild("NetworkPeer"), "SimulatedSecondsLag", 1.0)
-    elseif not DesyncEnabled then
-        pcall(function() sethiddenproperty(game:GetService("Providers"):FindFirstChild("NetworkPeer"), "SimulatedSecondsLag", 0.0) end)
+    if DesyncEnabled and LP.Character then
+        local r = LP.Character:FindFirstChild("HumanoidRootPart")
+        if r then
+            desyncFlip = not desyncFlip
+            -- Shifts your velocity packet back and forth instantly
+            -- Forces server replication to stutter and delay your position for others
+            r.Velocity = desyncFlip and Vector3.new(0, 0.05, 0) or Vector3.new(0, -0.05, 0)
+        end
     end
 end)
 
@@ -122,7 +129,7 @@ Divider.Size = UDim2.new(1, -32, 0, 1)
 Divider.Position = UDim2.new(0, 16, 0, 45)
 Divider.BackgroundColor3 = Color3.fromRGB(30, 32, 44)
 
--- CARD BUILDER
+-- CARD CONTAINER GENERATOR
 local function CreateCard(text, pos, callback)
     local Card = Instance.new("Frame", MainFrame)
     Card.Size = UDim2.new(1, -32, 0, 64)
