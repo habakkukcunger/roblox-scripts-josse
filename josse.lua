@@ -1,80 +1,98 @@
--- ==========================================
--- SAFE MOBILE INITIALIZATION
--- ==========================================
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
-local RunService = game:GetService("RunService")
-local LP = Players.LocalPlayer
-local PlayerGui = LP:WaitForChild("PlayerGui")
+-- MOBILE-SAFE CLEANUP ROUTINE
+local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local oldUI = PlayerGui:FindFirstChild("JosserpopsierV2")
+if oldUI then oldUI:Destroy() end
+task.wait(0.1)
 
--- Destroy any old layouts safely
-if PlayerGui:FindFirstChild("JosserpopsierV2") then 
-    PlayerGui.JosserpopsierV2:Destroy() 
-end
+-- MAIN VARIABLES SET
+local P, R, U, C = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService"), workspace.CurrentCamera
+local LP = P.LocalPlayer
+local off = Vector3.new(2.5, 2, 0)
 
-local ScriptEnabled = false
+local ScriptEnabled = false 
 local DesyncEnabled = false
+local sl = false
+local targetDir = nil 
+local jumpTimeThread = nil 
 
--- ==========================================
--- CORE FUNCTION LOGIC (MOBILE-SAFE)
--- ==========================================
-local function handleShiftlock(actionName, inputState, inputObj)
-    if not ScriptEnabled then return end
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local cam = workspace.CurrentCamera
-    
-    if inputState == Enum.UserInputState.Begin and hum and hrp and cam then
-        local look = cam.CFrame.LookVector
-        local targetDir = Vector3.new(look.X, 0, look.Z).Unit
-        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + targetDir)
+-- SAFE CHARACTER MOVEMENT LOGIC
+local function setup(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Jumping:Connect(function()
+        if not ScriptEnabled then return end 
+        if jumpTimeThread then task.cancel(jumpTimeThread) end
         
-        hum.CameraOffset = Vector3.new(2.5, 2, 0)
-        task.wait(0.4)
-        hum.CameraOffset = Vector3.new(0, 0, 0)
-    end
+        local l = C.CFrame.LookVector
+        targetDir = Vector3.new(l.X, 0, l.Z).Unit 
+        sl = true
+        
+        jumpTimeThread = task.spawn(function()
+            task.wait(0.4)
+            sl = false
+            targetDir = nil
+        end)
+    end)
+    
+    hum.StateChanged:Connect(function(_, s)
+        if s == Enum.HumanoidStateType.Landed then
+            sl = false
+            targetDir = nil 
+            if jumpTimeThread then task.cancel(jumpTimeThread) end
+        end
+    end)
 end
 
-ContextActionService:BindAction("VbJumpLock", handleShiftlock, false, Enum.KeyCode.Space)
+if LP.Character then setup(LP.Character) end
+LP.CharacterAdded:Connect(setup)
 
--- MODERN HARDWARE-LEVEL VISUAL DESYNC LOOP
+-- Auto Shiftlock Framework Execution Loop
+R.RenderStepped:Connect(function()
+    if not ScriptEnabled or not sl or not targetDir then return end
+    local o = LP.Character
+    local r = o and o:FindFirstChild("HumanoidRootPart")
+    local h = o and o:FindFirstChildOfClass("Humanoid")
+    
+    if r and h and h.Health > 0 then
+        U.MouseBehavior = Enum.MouseBehavior.LockCenter
+        r.CFrame = CFrame.new(r.Position, r.Position + targetDir)
+        h.CameraOffset = h.CameraOffset:LinearInterpolate(off, 0.2)
+    end
+end)
+
+-- Mobile-Safe Alternate Visual Desync Method
 local desyncMultiplier = 0.08
-RunService.Heartbeat:Connect(function()
-    if DesyncEnabled and LP.Character then
-        local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-        
-        -- Only applies desync while moving to successfully break opponent camera interpolation
-        if hrp and hum and hum.MoveDirection.Magnitude > 0 then
-            -- Rapidly offsets your frame orientation back and forth horizontally
-            hrp.CFrame = hrp.CFrame * CFrame.new(desyncMultiplier, 0, 0)
-            RunService.RenderStepped:Wait()
-            hrp.CFrame = hrp.CFrame * CFrame.new(-desyncMultiplier, 0, 0)
-        end
+R.Heartbeat:Connect(function()
+    if not DesyncEnabled or not LP.Character then return end
+    local r = LP.Character:FindFirstChild("HumanoidRootPart")
+    local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+    if r and hum and hum.MoveDirection.Magnitude > 0 then
+        r.CFrame = r.CFrame * CFrame.new(desyncMultiplier, 0, 0)
+        R.RenderStepped:Wait()
+        r.CFrame = r.CFrame * CFrame.new(-desyncMultiplier, 0, 0)
     end
 end)
 
 -- ==========================================
--- SECURE NATIVE SCREEN GUI
+-- STABLE CORE INTERFACE CONSTRUCT
 -- ==========================================
 local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "JosserpopsierV2"
 UI.ResetOnSpawn = false
 
+-- Repositioned to Bottom-Left Corner out of court view
 local MainFrame = Instance.new("Frame", UI)
 MainFrame.Size = UDim2.new(0, 260, 0, 150)
-MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
+MainFrame.Position = UDim2.new(0.05, 0, 0.6, 0) 
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true 
 
-local Corner = Instance.new("UICorner", MainFrame)
-Corner.CornerRadius = UDim.new(0, 10)
+local FrameCorner = Instance.new("UICorner", MainFrame)
+FrameCorner.CornerRadius = UDim.new(0, 10)
 
-local Stroke = Instance.new("UIStroke", MainFrame)
-Stroke.Color = Color3.fromRGB(50, 50, 60)
-Stroke.Thickness = 1.5
+local FrameStroke = Instance.new("UIStroke", MainFrame)
+FrameStroke.Color = Color3.fromRGB(50, 50, 60)
+FrameStroke.Thickness = 1.5
 
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, -40, 0, 35)
@@ -86,20 +104,28 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
-local HideBtn = Instance.new("TextButton", UI)
-HideBtn.Size = UDim2.new(0, 75, 0, 28)
-HideBtn.Position = UDim2.new(0.5, -40, 0, 10)
-HideBtn.Text = "Hide Hub"
-HideBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HideBtn.TextSize = 11
-HideBtn.Font = Enum.Font.GothamBold
-HideBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-Instance.new("UICorner", HideBtn).CornerRadius = UDim.new(0, 6)
+-- Floating Toggle Button pinned to Top-Center edge
+local ToggleUIBtn = Instance.new("TextButton", UI)
+ToggleUIBtn.Size = UDim2.new(0, 80, 0, 28)
+ToggleUIBtn.Position = UDim2.new(0.5, -40, 0, 5) 
+ToggleUIBtn.Text = "Hide Hub"
+ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleUIBtn.TextSize = 11
+ToggleUIBtn.Font = Enum.Font.GothamBold
+ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+ToggleUIBtn.Active = true
+ToggleUIBtn.Selectable = true
 
-HideBtn.MouseButton1Click:Connect(function()
+local ToggleUIBtnCorner = Instance.new("UICorner", ToggleUIBtn)
+ToggleUIBtnCorner.CornerRadius = UDim.new(0, 6)
+
+local ToggleStroke = Instance.new("UIStroke", ToggleUIBtn)
+ToggleStroke.Color = Color3.fromRGB(50, 52, 68)
+
+ToggleUIBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    HideBtn.Text = MainFrame.Visible and "Hide Hub" or "Show Hub"
-    HideBtn.BackgroundColor3 = MainFrame.Visible and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(0, 110, 230)
+    ToggleUIBtn.Text = MainFrame.Visible and "Hide Hub" or "Show Hub"
+    ToggleUIBtn.BackgroundColor3 = MainFrame.Visible and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(0, 110, 230)
 end)
 
 local List = Instance.new("UIListLayout", MainFrame)
@@ -112,24 +138,28 @@ Spacer.Size = UDim2.new(1, 0, 0, 35)
 Spacer.BackgroundTransparency = 1
 Spacer.LayoutOrder = 1
 
-local function MakeButton(labelText, order, callback)
-    local Row = Instance.new("Frame", MainFrame)
-    Row.Size = UDim2.new(1, -20, 0, 40)
-    Row.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-    Row.LayoutOrder = order
-    Instance.new("UICorner", Row).CornerRadius = UDim.new(0, 6)
+-- Card Generator Function Structure
+local function CreateCard(text, order, callback)
+    local Card = Instance.new("Frame", MainFrame)
+    Card.Size = UDim2.new(1, -20, 0, 40)
+    Card.LayoutOrder = order
+    Card.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+    Card.BorderSizePixel = 0
     
-    local Label = Instance.new("TextLabel", Row)
+    local CardCorner = Instance.new("UICorner", Card)
+    CardCorner.CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel", Card)
     Label.Size = UDim2.new(1, -85, 1, 0)
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Text = labelText
+    Label.Text = text
     Label.TextColor3 = Color3.fromRGB(200, 200, 210)
     Label.TextSize = 12
     Label.Font = Enum.Font.GothamMedium
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.BackgroundTransparency = 1
-    
-    local Btn = Instance.new("TextButton", Row)
+
+    local Btn = Instance.new("TextButton", Card)
     Btn.Size = UDim2.new(0, 70, 0, 28)
     Btn.Position = UDim2.new(1, -75, 0, 6)
     Btn.Text = "OFF"
@@ -137,17 +167,22 @@ local function MakeButton(labelText, order, callback)
     Btn.TextSize = 11
     Btn.Font = Enum.Font.GothamBold
     Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    Btn.BorderSizePixel = 0
+    Btn.Active = true
+    Btn.Selectable = true
     
-    local active = false
+    local BtnCorner = Instance.new("UICorner", Btn)
+    BtnCorner.CornerRadius = UDim.new(0, 4)
+
+    local enabled = false
     Btn.MouseButton1Click:Connect(function()
-        active = not active
-        Btn.Text = active and "ON" or "OFF"
-        Btn.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
-        Btn.BackgroundColor3 = active and Color3.fromRGB(0, 110, 230) or Color3.fromRGB(35, 35, 45)
-        callback(active)
+        enabled = not enabled
+        Btn.Text = enabled and "ON" or "OFF"
+        Btn.TextColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+        Btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 110, 230) or Color3.fromRGB(35, 35, 45)
+        callback(enabled)
     end)
 end
 
-MakeButton("Auto Shiftlock", 2, function(state) ScriptEnabled = state end)
-MakeButton("Desync Network", 3, function(state) DesyncEnabled = state end)
+CreateCard("Auto Shiftlock", 2, function(val) ScriptEnabled = val if not val then sl = false targetDir = nil end end)
+CreateCard("Desync Network", 3, function(val) DesyncEnabled = val end)
