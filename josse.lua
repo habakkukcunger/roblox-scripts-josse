@@ -2,7 +2,7 @@
 -- AUTOMATIC CLEANUP & SAFE GUARD
 -- ==========================================
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-local oldUI = PlayerGui:FindFirstChild("VBLegendsHub")
+local oldUI = PlayerGui:FindFirstChild("JosserpopsierRayMod")
 if oldUI then oldUI:Destroy() end
 task.wait(0.1)
 
@@ -78,82 +78,153 @@ R.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- CUSTOM NO-LAG USER INTERFACE (GUI)
+-- PREMIUM RAYFIELD-INSPIRED NATIVE UI (GUI)
 -- ==========================================
 local UI = Instance.new("ScreenGui", PlayerGui)
-UI.Name = "VBLegendsHub"
+UI.Name = "JosserpopsierRayMod"
 UI.ResetOnSpawn = false
 
--- Main Window (Resized smaller for single button look)
-local MainFrame = Instance.new("Frame", UI)
-MainFrame.Size = UDim2.new(0, 240, 0, 135)
-MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+-- Outer Glow Shadow Simulation Frame
+local ShadowFrame = Instance.new("Frame", UI)
+ShadowFrame.Size = UDim2.new(0, 320, 0, 190)
+ShadowFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
+ShadowFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+ShadowFrame.BackgroundTransparency = 0.4
+ShadowFrame.BorderSizePixel = 0
+ShadowFrame.Active = true
+ShadowFrame.Draggable = true
+
+local ShadowCorner = Instance.new("UICorner", ShadowFrame)
+ShadowCorner.CornerRadius = UDim.new(0, 14)
+
+-- Main Body Content Window
+local MainFrame = Instance.new("Frame", ShadowFrame)
+MainFrame.Size = UDim2.new(1, -6, 1, -6)
+MainFrame.Position = UDim2.new(0, 3, 0, 3)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true 
 
 local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 12)
 
--- Hub Title Bar
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "   josserpopsier hub"
+-- Header/Title Layout Banner
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1, 0, 0, 42)
+Header.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+Header.BorderSizePixel = 0
+
+local HeaderCorner = Instance.new("UICorner", Header)
+HeaderCorner.CornerRadius = UDim.new(0, 12)
+
+-- Cover bottom rounded corners of the title header
+local HeaderFix = Instance.new("Frame", Header)
+HeaderFix.Size = UDim2.new(1, 0, 0, 10)
+HeaderFix.Position = UDim2.new(0, 0, 1, -10)
+HeaderFix.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+HeaderFix.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 16, 0, 0)
+Title.Text = "josserpopsier hub"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 15
+Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
-Title.BorderSizePixel = 0
+Title.BackgroundTransparency = 1
 
-local TitleCorner = Instance.new("UICorner", Title)
-TitleCorner.CornerRadius = UDim.new(0, 10)
-
--- Close Button
-local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseBtn.TextSize = 14
-CloseBtn.Font = Enum.Font.GothamBold
+-- Sleek Rayfield-style Close TextButton
+local CloseBtn = Instance.new("TextButton", Header)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -34, 0, 9)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 160)
+CloseBtn.TextSize = 22
+CloseBtn.Font = Enum.Font.GothamMedium
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.MouseButton1Click:Connect(function() UI:Destroy() end)
 
--- Subtitle Label
-local GameLabel = Instance.new("TextLabel", MainFrame)
-GameLabel.Size = UDim2.new(1, -20, 0, 20)
-GameLabel.Position = UDim2.new(0, 15, 0, 50)
-GameLabel.Text = "Volleyball Legends Tool"
-GameLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
-GameLabel.TextSize = 11
-GameLabel.Font = Enum.Font.GothamBold
-GameLabel.TextXAlignment = Enum.TextXAlignment.Left
-GameLabel.BackgroundTransparency = 1
+-- Minimalist Sidebar Layout Navigation
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 90, 1, -42)
+Sidebar.Position = UDim2.new(0, 0, 0, 42)
+Sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+Sidebar.BorderSizePixel = 0
 
--- Auto Shiftlock Toggle Button
-local ToggleBtn = Instance.new("TextButton", MainFrame)
-ToggleBtn.Size = UDim2.new(1, -30, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 15, 0, 75)
-ToggleBtn.Text = "Auto Shiftlock: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 13
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) 
-ToggleBtn.BorderSizePixel = 0
+local TabBtn = Instance.new("TextButton", Sidebar)
+TabBtn.Size = UDim2.new(1, -12, 0, 30)
+TabBtn.Position = UDim2.new(0, 6, 0, 10)
+TabBtn.Text = "  Movement"
+TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabBtn.TextSize = 12
+TabBtn.Font = Enum.Font.GothamBold
+TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+TabBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 42)
+TabBtn.BorderSizePixel = 0
 
-local BtnCorner1 = Instance.new("UICorner", ToggleBtn)
-BtnCorner1.CornerRadius = UDim.new(0, 6)
+local TabBtnCorner = Instance.new("UICorner", TabBtn)
+TabBtnCorner.CornerRadius = UDim.new(0, 6)
 
-ToggleBtn.MouseButton1Click:Connect(function()
+-- Main Component Display Panel
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Size = UDim2.new(1, -102, 1, -54)
+ContentArea.Position = UDim2.new(0, 96, 0, 48)
+ContentArea.BackgroundTransparency = 1
+
+-- Custom High-End Dynamic Toggle Component Container
+local ToggleContainer = Instance.new("Frame", ContentArea)
+ToggleContainer.Size = UDim2.new(1, 0, 0, 44)
+ToggleContainer.Position = UDim2.new(0, 0, 0, 6)
+ToggleContainer.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
+ToggleContainer.BorderSizePixel = 0
+
+local ToggleCorner = Instance.new("UICorner", ToggleContainer)
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+
+local ToggleLabel = Instance.new("TextLabel", ToggleContainer)
+ToggleLabel.Size = UDim2.new(1, -60, 1, 0)
+ToggleLabel.Position = UDim2.new(0, 12, 0, 0)
+ToggleLabel.Text = "Auto Shiftlock"
+ToggleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+ToggleLabel.TextSize = 12
+ToggleLabel.Font = Enum.Font.GothamMedium
+ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+ToggleLabel.BackgroundTransparency = 1
+
+-- The Pill-Shaped Switch Backplate Graphic
+local SwitchBase = Instance.new("TextButton", ToggleContainer)
+SwitchBase.Size = UDim2.new(0, 36, 0, 20)
+SwitchBase.Position = UDim2.new(1, -48, 0, 12)
+SwitchBase.Text = ""
+SwitchBase.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+SwitchBase.BorderSizePixel = 0
+
+local BaseCorner = Instance.new("UICorner", SwitchBase)
+BaseCorner.CornerRadius = UDim.new(1, 0)
+
+-- Inner Interactive Toggle Indicator Bead
+local SwitchBall = Instance.new("Frame", SwitchBase)
+SwitchBall.Size = UDim2.new(0, 14, 0, 14)
+SwitchBall.Position = UDim2.new(0, 3, 0, 3)
+SwitchBall.BackgroundColor3 = Color3.fromRGB(200, 200, 205)
+SwitchBall.BorderSizePixel = 0
+
+local BallCorner = Instance.new("UICorner", SwitchBall)
+BallCorner.CornerRadius = UDim.new(1, 0)
+
+-- Core Interaction Event Logic
+SwitchBase.MouseButton1Click:Connect(function()
     ScriptEnabled = not ScriptEnabled
     if ScriptEnabled then
-        ToggleBtn.Text = "Auto Shiftlock: ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50) 
+        -- Smooth visual feedback animations (Turns green, slides right)
+        SwitchBase:TweenBackgroundColor3(Color3.fromRGB(60, 180, 110), "Out", "Quad", 0.15, true)
+        SwitchBall:TweenPosition(UDim2.new(0, 19, 0, 3), "Out", "Quad", 0.15, true)
+        SwitchBall.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     else
-        ToggleBtn.Text = "Auto Shiftlock: OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) 
+        -- Clear parameters and slide left (Turns dark grey)
+        SwitchBase:TweenBackgroundColor3(Color3.fromRGB(45, 45, 55), "Out", "Quad", 0.15, true)
+        SwitchBall:TweenPosition(UDim2.new(0, 3, 0, 3), "Out", "Quad", 0.15, true)
+        SwitchBall.BackgroundColor3 = Color3.fromRGB(200, 200, 205)
         sl = false
         targetDir = nil
     end
