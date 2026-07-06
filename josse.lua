@@ -84,9 +84,9 @@ local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "VBLegendsHub"
 UI.ResetOnSpawn = false
 
--- Main Window
+-- Main Window (Resized smaller for single button look)
 local MainFrame = Instance.new("Frame", UI)
-MainFrame.Size = UDim2.new(0, 240, 0, 180)
+MainFrame.Size = UDim2.new(0, 240, 0, 135)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
@@ -156,36 +156,5 @@ ToggleBtn.MouseButton1Click:Connect(function()
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) 
         sl = false
         targetDir = nil
-    end
-end)
-
--- WalkSpeed Modifier Button
-local SpeedBtn = Instance.new("TextButton", MainFrame)
-SpeedBtn.Size = UDim2.new(1, -30, 0, 35)
-SpeedBtn.Position = UDim2.new(0, 15, 0, 130)
-SpeedBtn.Text = "Boost Court Speed (Normal)"
-SpeedBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-SpeedBtn.TextSize = 12
-SpeedBtn.Font = Enum.Font.GothamBold
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) 
-SpeedBtn.BorderSizePixel = 0
-
-local BtnCorner2 = Instance.new("UICorner", SpeedBtn)
-BtnCorner2.CornerRadius = UDim.new(0, 6)
-
-local SpeedToggle = false
-SpeedBtn.MouseButton1Click:Connect(function()
-    SpeedToggle = not SpeedToggle
-    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        if SpeedToggle then
-            hum.WalkSpeed = 28 -- Boosted Court Positioning speed
-            SpeedBtn.Text = "Boost Court Speed (ACTIVE)"
-            SpeedBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            hum.WalkSpeed = 16 -- Regular speed reset
-            SpeedBtn.Text = "Boost Court Speed (Normal)"
-            SpeedBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-        end
     end
 end)
