@@ -2,12 +2,12 @@
 -- AUTOMATIC CLEANUP & SAFE GUARD
 -- ==========================================
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-local oldUI = PlayerGui:FindFirstChild("JosserpopsierFluentHub")
+local oldUI = PlayerGui:FindFirstChild("JosserpopsierV2")
 if oldUI then oldUI:Destroy() end
 task.wait(0.1)
 
 -- ==========================================
--- MAIN MECHANICS DATA
+-- MAIN ENGINE MECHANICS (Volleyball Legends)
 -- ==========================================
 local P, R, U, C = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService"), workspace.CurrentCamera
 local LP = P.LocalPlayer
@@ -78,81 +78,47 @@ R.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- PREMIUM FLUENT-INSPIRED NATIVE UI (GUI)
+-- MOBILE OPTIMIZED MODERN UI FRAMEWORK
 -- ==========================================
 local UI = Instance.new("ScreenGui", PlayerGui)
-UI.Name = "JosserpopsierFluentHub"
+UI.Name = "JosserpopsierV2"
 UI.ResetOnSpawn = false
 
--- Fluent Style Dark Translucent Main Window
+-- Glass-style Translucent Base Main Frame
 local MainFrame = Instance.new("Frame", UI)
-MainFrame.Size = UDim2.new(0, 360, 0, 220)
-MainFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BackgroundTransparency = 0.1
+MainFrame.Size = UDim2.new(0, 310, 0, 145)
+MainFrame.Position = UDim2.new(0.2, 0, 0.35, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(13, 14, 18) -- Dark Slate Theme
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true 
 
 local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 12)
 
--- Glowing Accent Stroke
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Color = Color3.fromRGB(45, 45, 60)
-UIStroke.Thickness = 1
-UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+-- Thin Tech Border Outline (Mimics High-End Frameworks)
+local FrameStroke = Instance.new("UIStroke", MainFrame)
+FrameStroke.Color = Color3.fromRGB(40, 42, 54)
+FrameStroke.Thickness = 1.2
+FrameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- Left Sidebar Navigation Panel
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 110, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-Sidebar.BackgroundTransparency = 0.2
-Sidebar.BorderSizePixel = 0
+-- Header Text Element
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, -50, 0, 45)
+Title.Position = UDim2.new(0, 16, 0, 0)
+Title.Text = "josserpopsier hub"
+Title.TextColor3 = Color3.fromRGB(240, 240, 245)
+Title.TextSize = 15
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
 
-local SideCorner = Instance.new("UICorner", Sidebar)
-SideCorner.CornerRadius = UDim.new(0, 10)
-
--- Cover the right rounded corners of the sidebar to keep clean fluid style
-local SideFix = Instance.new("Frame", Sidebar)
-SideFix.Size = UDim2.new(0, 15, 1, 0)
-SideFix.Position = UDim2.new(1, -15, 0, 0)
-SideFix.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-SideFix.BackgroundTransparency = 0.2
-SideFix.BorderSizePixel = 0
-
--- Header Text / Branding
-local HubName = Instance.new("TextLabel", Sidebar)
-HubName.Size = UDim2.new(1, 0, 0, 45)
-HubName.Position = UDim2.new(0, 12, 0, 0)
-HubName.Text = "josserpopsier"
-HubName.TextColor3 = Color3.fromRGB(255, 255, 255)
-HubName.TextSize = 15
-HubName.Font = Enum.Font.GothamBold
-HubName.TextXAlignment = Enum.TextXAlignment.Left
-HubName.BackgroundTransparency = 1
-
-local TabIndicator = Instance.new("TextLabel", Sidebar)
-TabIndicator.Size = UDim2.new(1, -12, 0, 30)
-TabBtnPosition = UDim2.new(0, 8, 0, 50)
-TabIndicator.Position = TabBtnPosition
-TabIndicator.Text = "  Movement"
-TabIndicator.TextColor3 = Color3.fromRGB(110, 140, 255) -- Premium blue text accent
-TabIndicator.TextSize = 13
-TabIndicator.Font = Enum.Font.GothamBold
-TabIndicator.TextXAlignment = Enum.TextXAlignment.Left
-TabIndicator.BackgroundColor3 = Color3.fromRGB(20, 22, 33)
-TabIndicator.BorderSizePixel = 0
-
-local TabCorner = Instance.new("UICorner", TabIndicator)
-TabCorner.CornerRadius = UDim.new(0, 6)
-
--- Sleek Close Button
+-- Sleek Close Indicator TouchButton
 local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -34, 0, 10)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -38, 0, 10)
 CloseBtn.Text = "×"
-CloseBtn.TextColor3 = Color3.fromRGB(140, 140, 150)
+CloseBtn.TextColor3 = Color3.fromRGB(160, 165, 180)
 CloseBtn.TextSize = 22
 CloseBtn.Font = Enum.Font.GothamMedium
 CloseBtn.BackgroundTransparency = 1
@@ -160,70 +126,71 @@ CloseBtn.Active = true
 CloseBtn.Selectable = true
 CloseBtn.MouseButton1Click:Connect(function() UI:Destroy() end)
 
--- Main Display Field Container
-local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Size = UDim2.new(1, -125, 1, -55)
-ContentArea.Position = UDim2.new(0, 120, 0, 45)
-ContentArea.BackgroundTransparency = 1
+-- Split Layout Line Divider
+local Divider = Instance.new("Frame", MainFrame)
+Divider.Size = UDim2.new(1, -32, 0, 1)
+Divider.Position = UDim2.new(0, 16, 0, 45)
+Divider.BackgroundColor3 = Color3.fromRGB(30, 32, 44)
+Divider.BorderSizePixel = 0
 
--- Fluent-style Large Toggle Card Panel
-local ToggleCard = Instance.new("Frame", ContentArea)
-ToggleCard.Size = UDim2.new(1, 0, 0, 50)
-ToggleCard.Position = UDim2.new(0, 0, 0, 10)
-ToggleCard.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-ToggleCard.BorderSizePixel = 0
-ToggleCard.Active = true
+-- Card Container Panel For Actions
+local Card = Instance.new("Frame", MainFrame)
+Card.Size = UDim2.new(1, -32, 0, 64)
+Card.Position = UDim2.new(0, 16, 0, 62)
+Card.BackgroundColor3 = Color3.fromRGB(20, 21, 28) -- Slightly lighter card background
+Card.BorderSizePixel = 0
 
-local CardCorner = Instance.new("UICorner", ToggleCard)
+local CardCorner = Instance.new("UICorner", Card)
 CardCorner.CornerRadius = UDim.new(0, 8)
 
-local CardStroke = Instance.new("UIStroke", ToggleCard)
-CardStroke.Color = Color3.fromRGB(35, 35, 45)
+local CardStroke = Instance.new("UIStroke", Card)
+CardStroke.Color = Color3.fromRGB(32, 34, 46)
 CardStroke.Thickness = 1
 
-local ToggleLabel = Instance.new("TextLabel", ToggleCard)
-ToggleLabel.Size = UDim2.new(1, -100, 1, 0)
-ToggleLabel.Position = UDim2.new(0, 14, 0, 0)
-ToggleLabel.Text = "Auto Shiftlock (On Jump)"
-ToggleLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
-ToggleLabel.TextSize = 13
-ToggleLabel.Font = Enum.Font.GothamMedium
-ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-ToggleLabel.BackgroundTransparency = 1
+-- Label Description Field
+local Label = Instance.new("TextLabel", Card)
+Label.Size = UDim2.new(1, -120, 1, 0)
+Label.Position = UDim2.new(0, 14, 0, 0)
+Label.Text = "Auto Shiftlock (Jump)"
+Label.TextColor3 = Color3.fromRGB(190, 195, 210)
+Label.TextSize = 13
+Label.Font = Enum.Font.GothamMedium
+Label.TextXAlignment = Enum.TextXAlignment.Left
+Label.BackgroundTransparency = 1
 
--- LARGE MOBILE-SAFE INTERACTIVE CHECKBOX TABS
-local ActionButton = Instance.new("TextButton", ToggleCard)
-ActionButton.Size = UDim2.new(0, 80, 0, 32)
-ActionButton.Position = UDim2.new(1, -94, 0, 9)
-ActionButton.Text = "Disabled"
-ActionButton.TextColor3 = Color3.fromRGB(200, 200, 210)
-ActionButton.TextSize = 11
-ActionButton.Font = Enum.Font.GothamBold
-ActionButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-ActionButton.BorderSizePixel = 0
-ActionButton.Active = true       -- Forces mobile register tracking
-ActionButton.Selectable = true   -- Forces mobile handler visibility
+-- REPAIRED MASTER INTERACTION TOGGLE BOX BUTTON
+local ToggleBtn = Instance.new("TextButton", Card)
+ToggleBtn.Size = UDim2.new(0, 85, 0, 34)
+ToggleBtn.Position = UDim2.new(1, -99, 0, 15)
+ToggleBtn.Text = "Disabled"
+ToggleBtn.TextColor3 = Color3.fromRGB(180, 185, 200)
+ToggleBtn.TextSize = 12
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46) -- Base state dark color
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Active = true       -- CRITICAL: Tells mobile engine this object intercepts touches
+ToggleBtn.Selectable = true   -- CRITICAL: Grants rendering priority to mobile viewport
 
-local ActCorner = Instance.new("UICorner", ActionButton)
-ActCorner.CornerRadius = UDim.new(0, 6)
+local BtnCorner = Instance.new("UICorner", ToggleBtn)
+BtnCorner.CornerRadius = UDim.new(0, 6)
 
-local ActStroke = Instance.new("UIStroke", ActionButton)
-ActStroke.Color = Color3.fromRGB(50, 50, 65)
-ActStroke.Thickness = 1
+local BtnStroke = Instance.new("UIStroke", ToggleBtn)
+BtnStroke.Color = Color3.fromRGB(45, 48, 64)
+BtnStroke.Thickness = 1
 
--- Master Interactive Click Event Mapping
-ActionButton.MouseButton1Click:Connect(function()
+-- 100% RELIABLE TAP LOGIC ROUTINE
+ToggleBtn.MouseButton1Click:Connect(function()
     ScriptEnabled = not ScriptEnabled
     if ScriptEnabled then
-        ActionButton.Text = "Enabled"
-        ActionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ActionButton:TweenBackgroundColor3(Color3.fromRGB(0, 122, 255), "Out", "Quad", 0.12, true) -- Fluent Blue Glow
-        ActStroke.Color = Color3.fromRGB(65, 165, 255)
+        ToggleBtn.Text = "Enabled"
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 230) -- Premium Royal Blue Glow Accent
+        BtnStroke.Color = Color3.fromRGB(60, 150, 255)
     else
-        ActionButton.Text = "Disabled"
-        ActionButton.TextColor3 = Color3.fromRGB(200, 200, 210)
-        ActionButton:TweenBackgroundColor3(Color3.fromRGB(35, 35, 45), "Out", "Quad", 0.12, true)
-        ActStroke.Color = Color3.fromRGB(50, 50, 65)
+        ToggleBtn.Text = "Disabled"
+        ToggleBtn.TextColor3 = Color3.fromRGB(180, 185, 200)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+        BtnStroke.Color = Color3.fromRGB(45, 48, 64)
         sl = false
         targetDir = nil
     end
