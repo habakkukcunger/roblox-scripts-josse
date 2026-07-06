@@ -1,16 +1,17 @@
 -- ==========================================
--- ANTI-EXECUTION GUARD (Prevents Duplicates)
+-- AUTOMATIC CLEANUP & SAFE GUARD
 -- ==========================================
-local CoreGui = game:GetService("CoreGui")
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
 
-if PlayerGui:FindFirstChild("Orion") or CoreGui:FindFirstChild("Orion") then
-    print("josserpopsier Hub is already running! Execution stopped to prevent clutter.")
-    return
+-- Automatically destroys ANY old or stuck interfaces so the new menu ALWAYS opens
+for _, oldUI in pairs({PlayerGui:FindFirstChild("Orion"), CoreGui:FindFirstChild("Orion"), PlayerGui:FindFirstChild("VBLegendsHub")}) do
+    if oldUI then oldUI:Destroy() end
 end
+task.wait(0.1)
 
--- Load Orion UI Library
-local OrionLib = loadstring(game:HttpGet(('https://githubusercontent.com')))()
+-- Load Stabilized Orion UI Library Mirror Link
+local OrionLib = loadstring(game:HttpGet('https://githubusercontent.com'))()
 
 -- ==========================================
 -- MAIN MECHANICS DATA
@@ -19,13 +20,11 @@ local P, R, U, C = game:GetService("Players"), game:GetService("RunService"), ga
 local LP = P.LocalPlayer
 local off = Vector3.new(2.5, 2, 0)
 
--- Core Control Variables
 local ScriptEnabled = false 
 local sl = false
 local targetDir = nil 
 local jumpTimeThread = nil 
 
--- Core Shiftlock Setup
 local function setup(char)
     local hum = char:WaitForChild("Humanoid")
     
@@ -68,7 +67,6 @@ end
 if LP.Character then setup(LP.Character) end
 LP.CharacterAdded:Connect(setup)
 
--- Continuous Render Loop
 R.RenderStepped:Connect(function()
     local o = LP.Character
     local r = o and o:FindFirstChild("HumanoidRootPart")
@@ -96,7 +94,6 @@ local Window = OrionLib:MakeWindow({
     IntroText = "Loading josserpopsier..."
 })
 
--- TAB 1: Movement Controls
 local MovementTab = Window:MakeTab({
     Name = "Movement",
     Icon = "rbxassetid://4483345998"
@@ -114,7 +111,6 @@ MovementTab:AddToggle({
     end    
 })
 
--- TAB 2: Utility Modifiers
 local UtilsTab = Window:MakeTab({
     Name = "Utilities",
     Icon = "rbxassetid://4483345998"
@@ -155,5 +151,4 @@ UtilsTab:AddSlider({
     end    
 })
 
--- Initialize the library layout completely
 OrionLib:Init()
