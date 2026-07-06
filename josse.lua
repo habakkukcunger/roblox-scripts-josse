@@ -1,9 +1,10 @@
--- AUTOMATIC CACHE CLEANUP
+-- MOBILE-SAFE CLEANUP ROUTINE
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-if PlayerGui:FindFirstChild("JosserpopsierV2") then PlayerGui.JosserpopsierV2:Destroy() end
+local oldUI = PlayerGui:FindFirstChild("JosserpopsierV2")
+if oldUI then oldUI:Destroy() end
 task.wait(0.1)
 
--- MAIN SYSTEM CONTEXT
+-- MAIN VARIABLES SET
 local P, R, U, C = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService"), workspace.CurrentCamera
 local LP = P.LocalPlayer
 local off = Vector3.new(2.5, 2, 0)
@@ -14,20 +15,24 @@ local sl = false
 local targetDir = nil 
 local jumpTimeThread = nil 
 
+-- SAFE CHARACTER MOVEMENT LOGIC
 local function setup(char)
     local hum = char:WaitForChild("Humanoid")
     hum.Jumping:Connect(function()
         if not ScriptEnabled then return end 
         if jumpTimeThread then task.cancel(jumpTimeThread) end
+        
         local l = C.CFrame.LookVector
         targetDir = Vector3.new(l.X, 0, l.Z).Unit 
         sl = true
+        
         jumpTimeThread = task.spawn(function()
             task.wait(0.4)
             sl = false
             targetDir = nil
         end)
     end)
+    
     hum.StateChanged:Connect(function(_, s)
         if s == Enum.HumanoidStateType.Landed then
             sl = false
@@ -40,34 +45,35 @@ end
 if LP.Character then setup(LP.Character) end
 LP.CharacterAdded:Connect(setup)
 
--- Auto Shiftlock Render System
+-- Auto Shiftlock Framework Execution Loop
 R.RenderStepped:Connect(function()
+    if not ScriptEnabled or not sl or not targetDir then return end
     local o = LP.Character
     local r = o and o:FindFirstChild("HumanoidRootPart")
     local h = o and o:FindFirstChildOfClass("Humanoid")
-    if ScriptEnabled and sl and targetDir and r and h and h.Health > 0 then
+    
+    if r and h and h.Health > 0 then
         U.MouseBehavior = Enum.MouseBehavior.LockCenter
         r.CFrame = CFrame.new(r.Position, r.Position + targetDir)
         h.CameraOffset = h.CameraOffset:LinearInterpolate(off, 0.2)
-    elseif h then
-        if U.MouseBehavior == Enum.MouseBehavior.LockCenter then U.MouseBehavior = Enum.MouseBehavior.Default end
-        h.CameraOffset = h.CameraOffset:LinearInterpolate(Vector3.new(), 0.2)
     end
 end)
 
--- MOBILE-SAFE DESYNC REPLICATION SYSTEM
-local desyncFlip = true
+-- Mobile-Safe Alternate Visual Desync Method
 R.Heartbeat:Connect(function()
-    if DesyncEnabled and LP.Character then
-        local r = LP.Character:FindFirstChild("HumanoidRootPart")
-        if r then
-            desyncFlip = not desyncFlip
-            r.Velocity = desyncFlip and Vector3.new(0, 5, 0) or Vector3.new(0, -5, 0)
-        end
+    if not DesyncEnabled or not LP.Character then return end
+    local r = LP.Character:FindFirstChild("HumanoidRootPart")
+    if r then
+        -- Safe positional micro-stuttering that forces lag interpolation across court screens
+        r.CFrame = r.CFrame * CFrame.new(0, 0, 0.01)
+        task.wait()
+        r.CFrame = r.CFrame * CFrame.new(0, 0, -0.01)
     end
 end)
 
--- CORE INTERFACE CONSTRUCT
+-- ==========================================
+-- STABLE CORE INTERFACE CONSTRUCT
+-- ==========================================
 local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "JosserpopsierV2"
 UI.ResetOnSpawn = false
@@ -78,7 +84,9 @@ MainFrame.Position = UDim2.new(0.2, 0, 0.35, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(13, 14, 18)
 MainFrame.Active = true
 MainFrame.Draggable = true 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local FrameCorner = Instance.new("UICorner", MainFrame)
+FrameCorner.CornerRadius = UDim.new(0, 12)
 
 local FrameStroke = Instance.new("UIStroke", MainFrame)
 FrameStroke.Color = Color3.fromRGB(40, 42, 54)
@@ -94,6 +102,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
+-- Fixed UI Viewport Lock Toggle Button
 local ToggleUIBtn = Instance.new("TextButton", UI)
 ToggleUIBtn.Size = UDim2.new(0, 80, 0, 30)
 ToggleUIBtn.Position = UDim2.new(0.5, -40, 0, 10) 
@@ -102,7 +111,10 @@ ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleUIBtn.TextSize = 11
 ToggleUIBtn.Font = Enum.Font.GothamBold
 ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
-Instance.new("UICorner", ToggleUIBtn).CornerRadius = UDim.new(0, 6)
+
+local ToggleUIBtnCorner = Instance.new("UICorner", ToggleUIBtn)
+ToggleUIBtnCorner.CornerRadius = UDim.new(0, 6)
+
 local ToggleStroke = Instance.new("UIStroke", ToggleUIBtn)
 ToggleStroke.Color = Color3.fromRGB(50, 52, 68)
 
@@ -126,14 +138,19 @@ local Divider = Instance.new("Frame", MainFrame)
 Divider.Size = UDim2.new(1, -32, 0, 1)
 Divider.Position = UDim2.new(0, 16, 0, 45)
 Divider.BackgroundColor3 = Color3.fromRGB(30, 32, 44)
+Divider.BorderSizePixel = 0
 
--- CARD CONTAINER GENERATOR
+-- Card Generator Function Structure
 local function CreateCard(text, pos, callback)
     local Card = Instance.new("Frame", MainFrame)
     Card.Size = UDim2.new(1, -32, 0, 64)
     Card.Position = pos
     Card.BackgroundColor3 = Color3.fromRGB(20, 21, 28)
-    Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 8)
+    Card.BorderSizePixel = 0
+    
+    local CardCorner = Instance.new("UICorner", Card)
+    CardCorner.CornerRadius = UDim.new(0, 8)
+    
     local CardStroke = Instance.new("UIStroke", Card)
     CardStroke.Color = Color3.fromRGB(32, 34, 46)
 
@@ -155,7 +172,13 @@ local function CreateCard(text, pos, callback)
     Btn.TextSize = 12
     Btn.Font = Enum.Font.GothamBold
     Btn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.BorderSizePixel = 0
+    Btn.Active = true
+    Btn.Selectable = true
+    
+    local BtnCorner = Instance.new("UICorner", Btn)
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    
     local BtnStroke = Instance.new("UIStroke", Btn)
     BtnStroke.Color = Color3.fromRGB(45, 48, 64)
 
