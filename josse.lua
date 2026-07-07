@@ -59,19 +59,18 @@ R.RenderStepped:Connect(function()
     end
 end)
 
--- WORKING DESYNC PIPELINE (REWRITTEN ENGINE VELOCITY METHOD)
-local desyncPower = Vector3.new(45, 0, 45) -- Optimized velocity shift value
+-- NON-FLYING OSCILLATING NETWORK DESYNC
 R.Heartbeat:Connect(function()
-    if not LP.Character then return end
+    if not DesyncEnabled or not LP.Character then return end
     local r = LP.Character:FindFirstChild("HumanoidRootPart")
     local hum = LP.Character:FindFirstChildOfClass("Humanoid")
     
-    if DesyncEnabled and r and hum and hum.Health > 0 then
-        -- Retain current local frame momentum while introducing network server jitter
-        local oldV = r.AssemblyLinearVelocity
-        r.AssemblyLinearVelocity = oldV + desyncPower
-        R.RenderStepped:Wait()
-        r.AssemblyLinearVelocity = oldV - desyncPower
+    if r and hum and hum.Health > 0 then
+        -- Uses math.sin over time to continuously reverse the velocity back and forth
+        -- This cancels out physical movement entirely while keeping the server lag active
+        local jitterX = math.sin(os.clock() * 90) * 40
+        local jitterZ = math.cos(os.clock() * 90) * 40
+        r.AssemblyLinearVelocity = Vector3.new(jitterX, 0, jitterZ)
     end
 end)
 
