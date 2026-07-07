@@ -59,18 +59,25 @@ R.RenderStepped:Connect(function()
     end
 end)
 
--- NON-FLYING OSCILLATING NETWORK DESYNC
-R.Heartbeat:Connect(function()
-    if not DesyncEnabled or not LP.Character then return end
-    local r = LP.Character:FindFirstChild("HumanoidRootPart")
-    local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-    
-    if r and hum and hum.Health > 0 then
-        -- Uses math.sin over time to continuously reverse the velocity back and forth
-        -- This cancels out physical movement entirely while keeping the server lag active
-        local jitterX = math.sin(os.clock() * 90) * 40
-        local jitterZ = math.cos(os.clock() * 90) * 40
-        r.AssemblyLinearVelocity = Vector3.new(jitterX, 0, jitterZ)
+-- WORKING SAFE VISUAL CFRAME DESYNC (FIXED TIMING MECHANIC)
+local desyncDistance = 3.5 -- Distance of your desync lag shadow
+task.spawn(function()
+    while true do
+        task.wait() -- A small delay ensures the Roblox server registers the lag state
+        if DesyncEnabled and LP.Character then
+            local r = LP.Character:FindFirstChild("HumanoidRootPart")
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            
+            if r and hum and hum.Health > 0 then
+                -- Temporarily shift position so the server drops tracking
+                local oldCFrame = r.CFrame
+                r.CFrame = oldCFrame * CFrame.new(desyncDistance, 0, 0)
+                
+                -- Short wait forces network lag, then immediately return safely to your original spot
+                R.Heartbeat:Wait()
+                r.CFrame = oldCFrame
+            end
+        end
     end
 end)
 
