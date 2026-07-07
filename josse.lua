@@ -10,7 +10,6 @@ local LP = P.LocalPlayer
 local off = Vector3.new(2.5, 2, 0)
 
 local ScriptEnabled = false 
-local DesyncEnabled = false
 local sl = false
 local targetDir = nil 
 local jumpTimeThread = nil 
@@ -59,28 +58,6 @@ R.RenderStepped:Connect(function()
     end
 end)
 
--- WORKING SAFE VISUAL CFRAME DESYNC (FIXED TIMING MECHANIC)
-local desyncDistance = 3.5 -- Distance of your desync lag shadow
-task.spawn(function()
-    while true do
-        task.wait() -- A small delay ensures the Roblox server registers the lag state
-        if DesyncEnabled and LP.Character then
-            local r = LP.Character:FindFirstChild("HumanoidRootPart")
-            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            
-            if r and hum and hum.Health > 0 then
-                -- Temporarily shift position so the server drops tracking
-                local oldCFrame = r.CFrame
-                r.CFrame = oldCFrame * CFrame.new(desyncDistance, 0, 0)
-                
-                -- Short wait forces network lag, then immediately return safely to your original spot
-                R.Heartbeat:Wait()
-                r.CFrame = oldCFrame
-            end
-        end
-    end
-end)
-
 -- ==========================================
 -- STABLE CORE INTERFACE CONSTRUCT
 -- ==========================================
@@ -89,7 +66,7 @@ UI.Name = "JosserpopsierV2"
 UI.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", UI)
-MainFrame.Size = UDim2.new(0, 260, 0, 150)
+MainFrame.Size = UDim2.new(0, 260, 0, 110) -- Reduced frame height since a button was removed
 MainFrame.Position = UDim2.new(0.05, 0, 0.6, 0) 
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.Active = true
@@ -191,4 +168,3 @@ local function CreateCard(text, order, callback)
 end
 
 CreateCard("Auto Shiftlock", 2, function(val) ScriptEnabled = val if not val then sl = false targetDir = nil end end)
-CreateCard("Desync Network", 3, function(val) DesyncEnabled = val end)
