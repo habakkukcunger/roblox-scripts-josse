@@ -59,16 +59,19 @@ R.RenderStepped:Connect(function()
     end
 end)
 
--- Mobile-Safe Alternate Visual Desync Method
-local desyncMultiplier = 0.08
+-- WORKING DESYNC PIPELINE (REWRITTEN ENGINE VELOCITY METHOD)
+local desyncPower = Vector3.new(45, 0, 45) -- Optimized velocity shift value
 R.Heartbeat:Connect(function()
-    if not DesyncEnabled or not LP.Character then return end
+    if not LP.Character then return end
     local r = LP.Character:FindFirstChild("HumanoidRootPart")
     local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-    if r and hum and hum.MoveDirection.Magnitude > 0 then
-        r.CFrame = r.CFrame * CFrame.new(desyncMultiplier, 0, 0)
+    
+    if DesyncEnabled and r and hum and hum.Health > 0 then
+        -- Retain current local frame momentum while introducing network server jitter
+        local oldV = r.AssemblyLinearVelocity
+        r.AssemblyLinearVelocity = oldV + desyncPower
         R.RenderStepped:Wait()
-        r.CFrame = r.CFrame * CFrame.new(-desyncMultiplier, 0, 0)
+        r.AssemblyLinearVelocity = oldV - desyncPower
     end
 end)
 
@@ -79,7 +82,6 @@ local UI = Instance.new("ScreenGui", PlayerGui)
 UI.Name = "JosserpopsierV2"
 UI.ResetOnSpawn = false
 
--- Repositioned to Bottom-Left Corner out of court view
 local MainFrame = Instance.new("Frame", UI)
 MainFrame.Size = UDim2.new(0, 260, 0, 150)
 MainFrame.Position = UDim2.new(0.05, 0, 0.6, 0) 
@@ -104,7 +106,6 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- Floating Toggle Button pinned to Top-Center edge
 local ToggleUIBtn = Instance.new("TextButton", UI)
 ToggleUIBtn.Size = UDim2.new(0, 80, 0, 28)
 ToggleUIBtn.Position = UDim2.new(0.5, -40, 0, 5) 
@@ -138,7 +139,6 @@ Spacer.Size = UDim2.new(1, 0, 0, 35)
 Spacer.BackgroundTransparency = 1
 Spacer.LayoutOrder = 1
 
--- Card Generator Function Structure
 local function CreateCard(text, order, callback)
     local Card = Instance.new("Frame", MainFrame)
     Card.Size = UDim2.new(1, -20, 0, 40)
