@@ -99,9 +99,10 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
+-- FIXED ACCESSIBILITY POSITIONING TO THE TOP RIGHT CORNER
 local TogBtn = Instance.new("TextButton", UI)
-TogBtn.Size = UDim2.new(0, 80, 0, 28)
-TogBtn.Position = UDim2.new(0.5, -40, 0, 5) 
+TogBtn.Size = UDim2.new(0, 85, 0, 28)
+TogBtn.Position = UDim2.new(1, -100, 0, 15) 
 TogBtn.Text = "Hide Hub"
 TogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TogBtn.TextSize = 11
