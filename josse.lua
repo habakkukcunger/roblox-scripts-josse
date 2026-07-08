@@ -1,18 +1,18 @@
 local P, T, R, U = game:GetService("Players"), game:GetService("TweenService"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, C = P.LocalPlayer, workspace.CurrentCamera
 local PlayerGui = LP:WaitForChild("PlayerGui")
-if PlayerGui:FindFirstChild("JHubV4") then PlayerGui.JHubV4:Destroy() end
+if PlayerGui:FindFirstChild("JHubV5") then PlayerGui.JHubV5:Destroy() end
 
 local Enabled, sl, targetDir, jumpThread, AutoSet = false, false, nil, nil, false
-local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV4" UI.ResetOnSpawn = false
+local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV5" UI.ResetOnSpawn = false
 
--- CYBER-NEON PREMIUM MAIN PLATFORM
+-- PREMIUM CYBER PLATFORM
 local Main = Instance.new("Frame", UI) Main.Size = UDim2.new(0, 240, 0, 150) Main.Position = UDim2.new(0.05, 0, 0.55, 0) Main.BackgroundColor3 = Color3.fromRGB(10, 11, 16) Main.Active, Main.Draggable, Main.Visible = true, true, false
 local UICorner = Instance.new("UICorner", Main) UICorner.CornerRadius = UDim.new(0, 10)
 local UIStroke = Instance.new("UIStroke", Main) UIStroke.Color = Color3.fromRGB(0, 170, 255) UIStroke.Thickness = 1.5
 local List = Instance.new("UIListLayout", Main) List.Padding = UDim.new(0, 6) List.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 32) Title.Text = "  josserpopsier hub v4" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 32) Title.Text = "  josserpopsier hub v5" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
 local UILine = Instance.new("Frame", Main) UILine.Size = UDim2.new(0, 220, 0, 1) UILine.BackgroundColor3 = Color3.fromRGB(30, 35, 50) UILine.BorderSizePixel = 0
 
 local Tog = Instance.new("TextButton", UI) Tog.Size = UDim2.new(0, 85, 0, 26) Tog.Position = UDim2.new(1, -100, 0, 15) Tog.Text, Tog.TextColor3, Tog.Font, Tog.TextSize, Tog.BackgroundColor3, Tog.Visible = "HIDE HUB", Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold, 10, Color3.fromRGB(15, 16, 24), false
@@ -32,10 +32,9 @@ end
 MakeBtn("Auto Shiftlock", function(v) Enabled = v if not v then sl = false targetDir = nil end end)
 MakeBtn("Auto Set Ball", function(v) AutoSet = v end)
 
--- FIXED LOCAL TARGET GROUND ADORNMENT
 local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.1 FloorMarker.Radius = 3.2 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 0.2 FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) FloorMarker.Adornee = workspace.Terrain FloorMarker.Parent = workspace
 
--- DYNAMIC SYSTEM LOADING SPLASH WITH ROBLOX HEADSHOT GRAPHIC
+-- DYNAMIC SYSTEM LOADING SPLASH WITH PORTRAIT Restored
 task.spawn(function()
     local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 240, 0, 160) Intro.Position = UDim2.new(0.5, -120, 0.4, -80) Intro.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
     local IC = Instance.new("UICorner", Intro) IC.CornerRadius = UDim.new(0, 10)
@@ -53,35 +52,38 @@ task.spawn(function()
     task.wait(4.3) Intro:Destroy() Main.Visible, Tog.Visible = true, true
 end)
 
--- VELOCITY INTERCEPT ENGINE
+-- COMPACT RECURSIVE TRACKING ENGINE
+local function FindBall(dir)
+    for _, item in ipairs(dir:GetChildren()) do
+        if item:IsA("BasePart") and item.Name:lower():match("ball") then return item end
+        local sub = FindBall(item) if sub then return sub end
+    end
+    return nil
+end
+
 task.spawn(function()
     while task.wait(0.01) do
-        local ball = workspace:FindFirstChild("Ball") or workspace:FindFirstChild("Volleyball") or workspace:FindFirstChildOfClass("Part")
-        if ball and ball:IsA("BasePart") and ball.Name:lower():match("ball") then
+        local ball = FindBall(workspace)
+        if ball then
             local pos, vel = ball.Position, ball.AssemblyLinearVelocity
             local g = workspace.Gravity
-            
             local dY = pos.Y - 0.2
             local disc = (vel.Y * vel.Y) + (2 * g * dY)
-            local t = 0
-            if disc >= 0 and g > 0 then t = (vel.Y + math.sqrt(disc)) / g end
+            local t = (disc >= 0 and g > 0) and ((vel.Y + math.sqrt(disc)) / g) or 0
             
             local hitFloorPos = pos + Vector3.new(vel.X * t, 0, vel.Z * t)
             local isBallGoingOut = (math.abs(hitFloorPos.X) > 65 or math.abs(hitFloorPos.Z) > 65)
             
             if isBallGoingOut then
-                -- Target ring snaps completely flat on the floor level
                 FloorMarker.CFrame = CFrame.new(hitFloorPos.X, 0.2, hitFloorPos.Z) * CFrame.Angles(math.pi/2, 0, 0)
             else
-                -- Instantly un-render target coordinates from the air if the play remains safe
                 FloorMarker.CFrame = CFrame.new(0, -100, 0)
-                
                 local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                -- Fires true M1 interaction loops natively mapped to sets
                 if AutoSet and root and (root.Position - pos).Magnitude < 11 and vel.Y < 5 then
-                    -- Fires the true native input setting remote for Volleyball Legends
                     local VIM = game:GetService("VirtualInputManager")
-                    VIM:SendKeyEvent(true, Enum.KeyCode.Q, false, game) task.wait(0.04)
-                    VIM:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) task.wait(0.03)
+                    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                     task.wait(0.6)
                 end
             end
