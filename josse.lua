@@ -1,10 +1,10 @@
 local P, T, R, U = game:GetService("Players"), game:GetService("TweenService"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, C = P.LocalPlayer, workspace.CurrentCamera
 local PlayerGui = LP:WaitForChild("PlayerGui")
-if PlayerGui:FindFirstChild("JHubV5") then PlayerGui.JHubV5:Destroy() end
+if PlayerGui:FindFirstChild("JHubV6") then PlayerGui.JHubV6:Destroy() end
 
 local Enabled, sl, targetDir, jumpThread, AutoSet = false, false, nil, nil, false
-local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV5" UI.ResetOnSpawn = false
+local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
 -- PREMIUM CYBER PLATFORM
 local Main = Instance.new("Frame", UI) Main.Size = UDim2.new(0, 240, 0, 150) Main.Position = UDim2.new(0.05, 0, 0.55, 0) Main.BackgroundColor3 = Color3.fromRGB(10, 11, 16) Main.Active, Main.Draggable, Main.Visible = true, true, false
@@ -12,7 +12,7 @@ local UICorner = Instance.new("UICorner", Main) UICorner.CornerRadius = UDim.new
 local UIStroke = Instance.new("UIStroke", Main) UIStroke.Color = Color3.fromRGB(0, 170, 255) UIStroke.Thickness = 1.5
 local List = Instance.new("UIListLayout", Main) List.Padding = UDim.new(0, 6) List.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 32) Title.Text = "  josserpopsier hub v5" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 32) Title.Text = "  josserpopsier hub v6" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
 local UILine = Instance.new("Frame", Main) UILine.Size = UDim2.new(0, 220, 0, 1) UILine.BackgroundColor3 = Color3.fromRGB(30, 35, 50) UILine.BorderSizePixel = 0
 
 local Tog = Instance.new("TextButton", UI) Tog.Size = UDim2.new(0, 85, 0, 26) Tog.Position = UDim2.new(1, -100, 0, 15) Tog.Text, Tog.TextColor3, Tog.Font, Tog.TextSize, Tog.BackgroundColor3, Tog.Visible = "HIDE HUB", Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold, 10, Color3.fromRGB(15, 16, 24), false
@@ -32,9 +32,10 @@ end
 MakeBtn("Auto Shiftlock", function(v) Enabled = v if not v then sl = false targetDir = nil end end)
 MakeBtn("Auto Set Ball", function(v) AutoSet = v end)
 
-local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.1 FloorMarker.Radius = 3.2 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 0.2 FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) FloorMarker.Adornee = workspace.Terrain FloorMarker.Parent = workspace
+-- ABSOLUTE WORLD SPACE RING INDICATOR (NO ADORNEE PINNING)
+local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.1 FloorMarker.Radius = 3.2 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 1 FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) FloorMarker.Parent = workspace
 
--- DYNAMIC SYSTEM LOADING SPLASH WITH PORTRAIT Restored
+-- DYNAMIC SYSTEM LOADING SPLASH WITH PORTRAIT AND LOADING BAR
 task.spawn(function()
     local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 240, 0, 160) Intro.Position = UDim2.new(0.5, -120, 0.4, -80) Intro.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
     local IC = Instance.new("UICorner", Intro) IC.CornerRadius = UDim.new(0, 10)
@@ -52,7 +53,6 @@ task.spawn(function()
     task.wait(4.3) Intro:Destroy() Main.Visible, Tog.Visible = true, true
 end)
 
--- COMPACT RECURSIVE TRACKING ENGINE
 local function FindBall(dir)
     for _, item in ipairs(dir:GetChildren()) do
         if item:IsA("BasePart") and item.Name:lower():match("ball") then return item end
@@ -61,13 +61,14 @@ local function FindBall(dir)
     return nil
 end
 
+-- TRACKING CALCULATIONS & ORIENTATION OVERRIDES
 task.spawn(function()
     while task.wait(0.01) do
         local ball = FindBall(workspace)
         if ball then
             local pos, vel = ball.Position, ball.AssemblyLinearVelocity
             local g = workspace.Gravity
-            local dY = pos.Y - 0.2
+            local dY = pos.Y - 0.1
             local disc = (vel.Y * vel.Y) + (2 * g * dY)
             local t = (disc >= 0 and g > 0) and ((vel.Y + math.sqrt(disc)) / g) or 0
             
@@ -75,20 +76,25 @@ task.spawn(function()
             local isBallGoingOut = (math.abs(hitFloorPos.X) > 65 or math.abs(hitFloorPos.Z) > 65)
             
             if isBallGoingOut then
-                FloorMarker.CFrame = CFrame.new(hitFloorPos.X, 0.2, hitFloorPos.Z) * CFrame.Angles(math.pi/2, 0, 0)
+                -- Reveal target ring and trap it flat at 0.1 height directly on the court floor
+                FloorMarker.Transparency = 0.2
+                FloorMarker.CFrame = CFrame.new(hitFloorPos.X, 0.1, hitFloorPos.Z) * CFrame.Angles(math.pi/2, 0, 0)
             else
-                FloorMarker.CFrame = CFrame.new(0, -100, 0)
+                -- Instantly turn invisible if the ball remains in bounds
+                FloorMarker.Transparency = 1
                 local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                -- Fires true M1 interaction loops natively mapped to sets
-                if AutoSet and root and (root.Position - pos).Magnitude < 11 and vel.Y < 5 then
+                -- Intercept and handle setting physics mechanics natively 
+                if AutoSet and root and (root.Position - pos).Magnitude < 12 and vel.Y < 3 then
+                    -- Adjust camera vector instantly upward to trigger character set hitbox
+                    C.CFrame = CFrame.new(C.CFrame.Position, pos)
                     local VIM = game:GetService("VirtualInputManager")
                     VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) task.wait(0.03)
                     VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                    task.wait(0.6)
+                    task.wait(0.5)
                 end
             end
         else
-            FloorMarker.CFrame = CFrame.new(0, -100, 0)
+            FloorMarker.Transparency = 1
         end
     end
 end)
