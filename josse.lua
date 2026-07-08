@@ -99,7 +99,6 @@ Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- FIXED ACCESSIBILITY POSITIONING TO THE TOP RIGHT CORNER
 local TogBtn = Instance.new("TextButton", UI)
 TogBtn.Size = UDim2.new(0, 85, 0, 28)
 TogBtn.Position = UDim2.new(1, -100, 0, 15) 
@@ -183,7 +182,8 @@ task.spawn(function()
     T:Create(BarFill, info, {BackgroundTransparency = 0}):Play()
     task.wait(0.5)
     
-    local load = T:Create(BarFill, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
+    -- Extended loading bar tween from 1.5 seconds to 4.0 seconds
+    local load = T:Create(BarFill, TweenInfo.new(4.0, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
     load:Play()
     load.Completed:Wait()
     task.wait(0.2)
