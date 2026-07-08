@@ -31,16 +31,15 @@ end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 local function OptFn()
     pcall(function()
-        local l=game:GetService("Lighting")
-        l.GlobalShadows,l.FogEnd,l.Ambient,l.OutdoorAmbient=false,0,Color3.fromRGB(0,0,0),Color3.fromRGB(0,0,0)
-        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then g:Destroy() end end
+        local l=game:GetService("Lighting") l.GlobalShadows,l.FogEnd,l.Ambient,l.OutdoorAmbient=false,9e9,Color3.fromRGB(40,40,40),Color3.fromRGB(40,40,40)
+        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
     end)
     pcall(function()
         settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
         for _,v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.CastShadow,v.Material,v.MaterialVariant=false,Enum.Material.SmoothPlastic,""
-                if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity,v.LevelOfDetail,v.MeshId,v.TextureID=Enum.RenderFidelity.Performance,Enum.LevelOfDetail.Low,"","rbxassetid://0" end
+                if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity,v.LevelOfDetail,v.TextureID=Enum.RenderFidelity.Performance,Enum.LevelOfDetail.Low,"" end
             elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("Trail") then v:Destroy()
             elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then v:Destroy()
             elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then if not v:IsDescendantOf(LP) then v.Enabled=false end end
