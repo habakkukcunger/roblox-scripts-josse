@@ -64,36 +64,27 @@ end
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
 MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
 
--- AUTOMATIC MULTI-CHECK TEAM FILTER (NATIVE TEAM + COLOR BACKUP)
 local function IsTeammate(player)
     if player == LP then return true end
-    
-    -- Check 1: Check built-in Roblox Team values
     if LP.Team and player.Team then
         if LP.Team == player.Team then return true end
     end
-    
-    -- Check 2: Check standard tab/leaderboard Team Colors
     if LP.TeamColor and player.TeamColor then
         if LP.TeamColor == player.TeamColor then return true end
     end
-    
-    -- Check 3: Check common structural court object folder identifiers
     local myChar = LP.Character
     local targetChar = player.Character
     if myChar and targetChar and myChar.Parent == targetChar.Parent and myChar.Parent.Name:lower():match("team") then
         return true
     end
-    
     return false
 end
 
--- RUNTIME BEAM LOGIC WITH AUTOMATIC TEAM FILTERING
+-- RUNTIME BEAM LOGIC WITH INCREASED VISIBILITY AND THICKNESS
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        -- Block the beams from drawing if the player triggers a teammate confirmation match
         if player ~= LP and not IsTeammate(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
             local data = ActiveBeams[player]
@@ -105,21 +96,27 @@ R.RenderStepped:Connect(function()
                 
                 beam.Attachment0 = a0
                 beam.Attachment1 = a1
-                beam.Width0 = 0.15 
-                beam.Width1 = 0.05 
-                beam.Color = ColorSequence.new(Color3.fromRGB(235, 35, 75)) 
+                
+                -- INCREASED WIDTH FOR HIGH MOBILITY VISIBILITY
+                beam.Width0 = 0.45 
+                beam.Width1 = 0.20 
+                
+                -- ULTRA HIGH-CONTRAST CHROME GREEN COLOR (CUTS THROUGH THE CRIMSON UI AND ALL GYM LIGHTING)
+                beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 120)) 
                 beam.FaceCamera = true
-                beam.LightEmission = 0.5
-                beam.ZOffset = 1
+                
+                -- BOOSTED BRIGHTNESS VALUE TO MAKE IT POP IN DARK ARENAS
+                beam.LightEmission = 1.0
+                beam.LightInfluence = 0.0
+                beam.ZOffset = 2
                 
                 data = {Beam = beam, A0 = a0, A1 = a1}
                 ActiveBeams[player] = data
             end
             
             data.A0.CFrame = CFrame.new(0, 0, -0.6) 
-            data.A1.CFrame = CFrame.new(0, 0, -25) 
+            data.A1.CFrame = CFrame.new(0, 0, -30) -- Extended distance to track deep spikes easily
         else
-            -- Instantly clear out lines if a teammate falls into the check boundaries
             if ActiveBeams[player] then
                 pcall(function()
                     ActiveBeams[player].Beam:Destroy()
