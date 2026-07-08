@@ -32,24 +32,28 @@ end
 MakeBtn("Auto Shiftlock", function(v) Enabled = v if not v then sl = false targetDir = nil end end)
 MakeBtn("Auto Set Ball", function(v) AutoSet = v end)
 
--- FLOOR LANDING ESP RING COMPONENT
-local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.2 FloorMarker.Radius = 3.5 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 0.3 FloorMarker.Adornee = workspace.Terrain FloorMarker.Parent = workspace
+-- FIXED LOCAL TARGET GROUND ADORNMENT
+local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.1 FloorMarker.Radius = 3.2 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 0.2 FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) FloorMarker.Adornee = workspace.Terrain FloorMarker.Parent = workspace
 
--- HIGH-END INTRO TIMELINE WITH ANIMATED FILL LOADING BAR
+-- DYNAMIC SYSTEM LOADING SPLASH WITH ROBLOX HEADSHOT GRAPHIC
 task.spawn(function()
-    local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 240, 0, 120) Intro.Position = UDim2.new(0.5, -120, 0.4, -60) Intro.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
+    local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 240, 0, 160) Intro.Position = UDim2.new(0.5, -120, 0.4, -80) Intro.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
     local IC = Instance.new("UICorner", Intro) IC.CornerRadius = UDim.new(0, 10)
     local IS = Instance.new("UIStroke", Intro) IS.Color = Color3.fromRGB(0, 170, 255) IS.Thickness = 1.5
-    local Lbl = Instance.new("TextLabel", Intro) Lbl.Size = UDim2.new(1, 0, 0, 40) Lbl.Position = UDim2.new(0, 0, 0, 25) Lbl.Text = "script made by jossepopsi" Lbl.TextColor3 = Color3.fromRGB(255, 255, 255) Lbl.TextSize = 13 Lbl.Font = Enum.Font.GothamBold Lbl.BackgroundTransparency = 1
     
-    local B_Bg = Instance.new("Frame", Intro) B_Bg.Size = UDim2.new(0, 160, 0, 4) B_Bg.Position = UDim2.new(0.5, -80, 0, 80) B_Bg.BackgroundColor3 = Color3.fromRGB(30, 32, 45) B_Bg.BorderSizePixel = 0
+    local Avatar = Instance.new("ImageLabel", Intro) Avatar.Size = UDim2.new(0, 55, 0, 55) Avatar.Position = UDim2.new(0.5, -27, 0, 12) Avatar.BackgroundTransparency = 1
+    local AvC = Instance.new("UICorner", Avatar) AvC.CornerRadius = UDim.new(1, 0)
+    pcall(function() Avatar.Image = P:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
+    
+    local Lbl = Instance.new("TextLabel", Intro) Lbl.Size = UDim2.new(1, 0, 0, 30) Lbl.Position = UDim2.new(0, 0, 0, 75) Lbl.Text = "script made by jossepopsi" Lbl.TextColor3 = Color3.fromRGB(255, 255, 255) Lbl.TextSize = 12 Lbl.Font = Enum.Font.GothamBold Lbl.BackgroundTransparency = 1
+    local B_Bg = Instance.new("Frame", Intro) B_Bg.Size = UDim2.new(0, 160, 0, 4) B_Bg.Position = UDim2.new(0.5, -80, 0, 115) B_Bg.BackgroundColor3 = Color3.fromRGB(30, 32, 45) B_Bg.BorderSizePixel = 0
     local B_Fill = Instance.new("Frame", B_Bg) B_Fill.Size = UDim2.new(0, 0, 1, 0) B_Fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255) B_Fill.BorderSizePixel = 0
     
     T:Create(B_Fill, TweenInfo.new(4.0, Enum.EasingStyle.Sine), {Size = UDim2.new(1, 0, 1, 0)}):Play()
     task.wait(4.3) Intro:Destroy() Main.Visible, Tog.Visible = true, true
 end)
 
--- PRECISE ACCURATE PHYSICAL FLOOR ESTIMATOR ENGINE
+-- VELOCITY INTERCEPT ENGINE
 task.spawn(function()
     while task.wait(0.01) do
         local ball = workspace:FindFirstChild("Ball") or workspace:FindFirstChild("Volleyball") or workspace:FindFirstChildOfClass("Part")
@@ -57,30 +61,28 @@ task.spawn(function()
             local pos, vel = ball.Position, ball.AssemblyLinearVelocity
             local g = workspace.Gravity
             
-            -- High-accuracy projectile quad math calculation for the floor spot
             local dY = pos.Y - 0.2
             local disc = (vel.Y * vel.Y) + (2 * g * dY)
             local t = 0
-            if disc >= 0 then t = (vel.Y + math.sqrt(disc)) / g end
+            if disc >= 0 and g > 0 then t = (vel.Y + math.sqrt(disc)) / g end
             
-            local landPos = pos + Vector3.new(vel.X * t, 0, vel.Z * t)
-            local hitFloorPos = Vector3.new(landPos.X, 0.2, landPos.Z)
-            FloorMarker.CFrame = CFrame.new(hitFloorPos) * CFrame.Angles(math.pi/2, 0, 0)
-            
-            -- Map limits check to flag if the projectile falls out-of-bounds
+            local hitFloorPos = pos + Vector3.new(vel.X * t, 0, vel.Z * t)
             local isBallGoingOut = (math.abs(hitFloorPos.X) > 65 or math.abs(hitFloorPos.Z) > 65)
             
             if isBallGoingOut then
-                FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) -- Neon Red Alert
+                -- Target ring snaps completely flat on the floor level
+                FloorMarker.CFrame = CFrame.new(hitFloorPos.X, 0.2, hitFloorPos.Z) * CFrame.Angles(math.pi/2, 0, 0)
             else
-                FloorMarker.Color3 = Color3.fromRGB(0, 255, 120) -- Cyber Green Safe
+                -- Instantly un-render target coordinates from the air if the play remains safe
+                FloorMarker.CFrame = CFrame.new(0, -100, 0)
+                
                 local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                if AutoSet and root and (root.Position - pos).Magnitude < 11 then
-                    -- Fires the true native setting keybind directly into the core game framework
+                if AutoSet and root and (root.Position - pos).Magnitude < 11 and vel.Y < 5 then
+                    -- Fires the true native input setting remote for Volleyball Legends
                     local VIM = game:GetService("VirtualInputManager")
-                    VIM:SendKeyEvent(true, Enum.KeyCode.Q, false, game) task.wait(0.05)
+                    VIM:SendKeyEvent(true, Enum.KeyCode.Q, false, game) task.wait(0.04)
                     VIM:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-                    task.wait(0.5)
+                    task.wait(0.6)
                 end
             end
         else
