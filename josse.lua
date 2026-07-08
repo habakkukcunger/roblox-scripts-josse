@@ -8,13 +8,13 @@ local ActiveLines = {}
 
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- SLEEK GLASSMORPHIC COMPACT CHASSIS (FITS BOTH FEATURES PERFECTLY)
+-- STYLISH GLASSMORPHIC COMPACT CHASSIS
 local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- RIGID BOUNDS SCREEN CLAMP (MOBILE-SAFE OVERRIDE)
+-- SCREENSIDE CLAMP (STAYS 100% IN BOUNDS)
 local function ClampToScreen()
     local vs = C.ViewportSize
     local px = math.clamp(M.AbsolutePosition.X, 12, vs.X - M.AbsoluteSize.X - 12)
@@ -24,7 +24,7 @@ end
 M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
 
--- HIDDEN SAFETY RECOVERY PANEL (TAP TOP CENTER TO SNAP BACK)
+-- HIDDEN RESET BUTTON (TAP TOP CENTER)
 local Rec = Instance.new("TextButton", UI) Rec.Size = UDim2.new(0.2, 0, 0, 25) Rec.Position = UDim2.new(0.4, 0, 0, 0) Rec.BackgroundTransparency, Rec.Text = 1, ""
 Rec.MouseButton1Click:Connect(function() M.Position = UDim2.new(0.05, 0, 0.35, 0) end)
 
@@ -52,23 +52,33 @@ local function MB(txt, cb)
     end)
 end
 
-MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
-MB("Opponent Face Lines", function(v) FaceESP = v if not v then for _, l in pairs(ActiveLines) do l:Destroy() end table.clear(ActiveLines) end end)
+-- CLEAR CONTAINER CLEANUP FUNCTION
+local function ClearAllLines()
+    for _, l in pairs(ActiveLines) do pcall(function() l:Destroy() end) end
+    table.clear(ActiveLines)
+end
 
--- OPTION B INTERNAL TEAM DETECTION METHOD
+MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
+MB("Opponent Face Lines", function(v) FaceESP = v if not v then ClearAllLines() end end)
+
+-- LIVE GAME INTERCEPT ENGINE (AUTO-RECALCULATES ON TEAM ASSIGNMENT CHANGES)
 local function IsOpponent(player)
     if player == LP then return false end
-    -- Checks hidden object values or game leadership profiles
-    local lpTeam = LP:GetAttribute("Team") or (LP:FindFirstChild("leaderstats") and LP.leaderstats:FindFirstChild("Team"))
-    local plTeam = player:GetAttribute("Team") or (player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Team"))
-    if lpTeam and plTeam then
-        return lpTeam.Value ~= plTeam.Value
+    
+    -- Dynamic Check Strategy: Looks at Roblox Teams Service
+    if LP.Team and player.Team then
+        return LP.Team ~= player.Team
     end
-    -- Fallback strategy if attribute names vary
+    
+    -- Dynamic Check Strategy B: Looks at display color layouts on leaderboards
+    if LP.TeamColor and player.TeamColor then
+        return LP.TeamColor ~= player.TeamColor
+    end
+    
     return true
 end
 
--- HIGH-PERFORMANCE LOW-OVERHEAD DIRECTIONAL ESP ENGINE
+-- DIRECTIONAL LASER CASTING CORE
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
@@ -78,36 +88,31 @@ R.RenderStepped:Connect(function()
             local line = ActiveLines[player]
             
             if not line then
-                -- Render a sleek Adornment vector directly in 3D Space
                 line = Instance.new("CylinderHandleAdornment")
-                line.Height = 10 -- Length of the tracking gaze line
-                line.Radius = 0.08 -- Clean thin laser aesthetics
-                line.Color3 = Color3.fromRGB(255, 35, 75) -- Matches your Crimson UI
+                line.Height = 12
+                line.Radius = 0.06
+                line.Color3 = Color3.fromRGB(235, 35, 75)
                 line.AlwaysOnTop = true
                 line.ZIndex = 5
                 line.Parent = workspace
                 ActiveLines[player] = line
             end
             
-            -- Lock position and align vector pointing forward out of character gaze direction
-            line.CFrame = CFrame.new(head.Position + (head.CFrame.LookVector * 5), head.Position) * CFrame.Angles(math.pi/2, 0, 0)
+            line.CFrame = CFrame.new(head.Position + (head.CFrame.LookVector * 6), head.Position) * CFrame.Angles(math.pi/2, 0, 0)
         else
             if ActiveLines[player] then
-                ActiveLines[player]:Destroy()
+                pcall(function() ActiveLines[player]:Destroy() end)
                 ActiveLines[player] = nil
             end
         end
     end
 end)
 
-P.PlayerRemoving:Connect(function(player)
-    if ActiveLines[player] then
-        ActiveLines[player]:Destroy()
-        ActiveLines[player] = nil
-    end
-end)
+-- AUTO CLEANUP ON PLAYER SIDE SQUASH
+P.PlayerRemoving:Connect(function(p) if ActiveLines[p] then pcall(function() ActiveLines[p]:Destroy() end) ActiveLines[p] = nil end end)
+LP:GetPropertyChangedSignal("Team"):Connect(ClearAllLines)
 
--- COMPACT STEALTH LAYOUT INITIALIZATION
+-- MINIMAL INITIALIZATION OVERLAY
 task.spawn(function()
     local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
