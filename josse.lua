@@ -52,45 +52,27 @@ local function MB(txt, cb)
     end)
 end
 
--- CLEAR CONTAINER CLEANUP FUNCTION
 local function ClearAllLines()
     for _, l in pairs(ActiveLines) do pcall(function() l:Destroy() end) end
     table.clear(ActiveLines)
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
-MB("Opponent Face Lines", function(v) FaceESP = v if not v then ClearAllLines() end end)
+MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllLines() end end)
 
--- LIVE GAME INTERCEPT ENGINE (AUTO-RECALCULATES ON TEAM ASSIGNMENT CHANGES)
-local function IsOpponent(player)
-    if player == LP then return false end
-    
-    -- Dynamic Check Strategy: Looks at Roblox Teams Service
-    if LP.Team and player.Team then
-        return LP.Team ~= player.Team
-    end
-    
-    -- Dynamic Check Strategy B: Looks at display color layouts on leaderboards
-    if LP.TeamColor and player.TeamColor then
-        return LP.TeamColor ~= player.TeamColor
-    end
-    
-    return true
-end
-
--- DIRECTIONAL LASER CASTING CORE
+-- FIXED PACKET ENGINE: TARGETS ALL PLAYERS GUARANTEED WITH NO DECEPTIVE TEAM FILTERING
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        if IsOpponent(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+        if player ~= LP and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
             local line = ActiveLines[player]
             
             if not line then
                 line = Instance.new("CylinderHandleAdornment")
-                line.Height = 12
-                line.Radius = 0.06
+                line.Height = 12 -- Length of laser projection line
+                line.Radius = 0.06 -- Thin modern profile outline
                 line.Color3 = Color3.fromRGB(235, 35, 75)
                 line.AlwaysOnTop = true
                 line.ZIndex = 5
@@ -108,11 +90,9 @@ R.RenderStepped:Connect(function()
     end
 end)
 
--- AUTO CLEANUP ON PLAYER SIDE SQUASH
 P.PlayerRemoving:Connect(function(p) if ActiveLines[p] then pcall(function() ActiveLines[p]:Destroy() end) ActiveLines[p] = nil end end)
-LP:GetPropertyChangedSignal("Team"):Connect(ClearAllLines)
 
--- MINIMAL INITIALIZATION OVERLAY
+-- CLEAN INLINE LOADING SEQUENCE
 task.spawn(function()
     local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
