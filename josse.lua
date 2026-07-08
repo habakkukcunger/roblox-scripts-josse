@@ -6,27 +6,36 @@ if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 local SL, JP, TD, JT = false, false, nil, nil
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- LUXURY CYBERPUNK MECHA INTERFACE
-local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 260, 0, 120) M.Position = UDim2.new(0.05, 0, 0.55, 0) M.BackgroundColor3 = Color3.fromRGB(5, 1, 2) M.BackgroundTransparency = 0.1 M.Active, M.Draggable, M.Visible = true, true, false
+-- SAFE MOBILE FRAME POSITIONING (PERCENTAGE BASED)
+local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 240, 0, 120) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(5, 1, 2) M.BackgroundTransparency = 0.1 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 16)
 
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness, S.ApplyStrokeMode = Color3.fromRGB(255, 10, 50), 2.5, Enum.ApplyStrokeMode.Border
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center
 
--- DYNAMIC RAINBOW/NEON PHASE GRADIENT FOR MAIN BORDER
+-- OFF-SCREEN FAILSAFE PROTECTION
+local function ClampToScreen()
+    local viewSize = C.ViewportSize
+    local posX = math.clamp(M.AbsolutePosition.X, 10, viewSize.X - M.AbsoluteSize.X - 10)
+    local posY = math.clamp(M.AbsolutePosition.Y, 40, viewSize.Y - M.AbsoluteSize.Y - 40)
+    M.Position = UDim2.new(0, posX, 0, posY)
+end
+M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
+C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
+
 task.spawn(function()
     while task.wait(0.02) do
         local t = tick()
-        local r = (math.sin(t * 2) * 35) + 220
-        S.Color = Color3.fromRGB(r, 10, 50 + (math.cos(t * 2) * 20))
+        S.Color = Color3.fromRGB((math.sin(t * 2) * 35) + 220, 10, 50 + (math.cos(t * 2) * 20))
     end
 end)
 
-local Tl = Instance.new("TextLabel", M) Tl.Size = UDim2.new(1, -24, 0, 40) Tl.Text = "⚡ JOSSERPOPSIER // V6" Tl.TextColor3 = Color3.fromRGB(255, 245, 247) Tl.TextSize, Tl.Font, Tl.TextXAlignment, Tl.BackgroundTransparency = 13, Enum.Font.Code, Enum.TextXAlignment.Left, 1
-local Ln = Instance.new("Frame", M) Ln.Size, Ln.BorderSizePixel = UDim2.new(0, 240, 0, 2), 0
+local Tl = Instance.new("TextLabel", M) Tl.Size = UDim2.new(1, -24, 0, 40) Tl.Text = "⚡ JOSSERPOPSIER // V6" Tl.TextColor3 = Color3.fromRGB(255, 245, 247) Tl.TextSize, Tl.Font, Tl.TextXAlignment, Tl.BackgroundTransparency = 12, Enum.Font.Code, Enum.TextXAlignment.Left, 1
+local Ln = Instance.new("Frame", M) Ln.Size, Ln.BorderSizePixel = UDim2.new(0, 220, 0, 2), 0
 local LnG = Instance.new("UIGradient", Ln) LnG.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 10, 50)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 5, 10)), ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 1, 2))})
 
-local Tg = Instance.new("TextButton", UI) Tg.Size = UDim2.new(0, 110, 0, 30) Tg.Position = UDim2.new(1, -130, 0, 20) Tg.Text, Tg.TextColor3, Tg.Font, Tg.TextSize, Tg.BackgroundColor3, Tg.Visible = "[ TERMINAL: MIN ]", Color3.fromRGB(255, 215, 220) , Enum.Font.Code, 11, Color3.fromRGB(12, 2, 4), false
+-- MOBILE ACCESSIBLE TOP-RIGHT BUTTON OVERLAY
+local Tg = Instance.new("TextButton", UI) Tg.Size = UDim2.new(0, 110, 0, 30) Tg.Position = UDim2.new(1, -130, 0, 50) Tg.Text, Tg.TextColor3, Tg.Font, Tg.TextSize, Tg.BackgroundColor3, Tg.Visible = "[ TERMINAL: MIN ]", Color3.fromRGB(255, 215, 220) , Enum.Font.Code, 11, Color3.fromRGB(12, 2, 4), false
 Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 8)
 local TS = Instance.new("UIStroke", Tg) TS.Color, TS.Thickness = Color3.fromRGB(255, 10, 50), 1.5
 Tg.MouseButton1Click:Connect(function() M.Visible = not M.Visible Tg.Text = M.Visible and "[ TERMINAL: MIN ]" or "[ TERMINAL: MAX ]" end)
@@ -53,25 +62,20 @@ end
 
 MB("Shiftlock Alignment", function(v) SL = v if not v then JP, TD = false, nil end end)
 
--- PREMIUM SCI-FI BOOT LOADING CHASSIS
 task.spawn(function()
-    local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 280, 0, 200), UDim2.new(0.5, -140, 0.4, -100), Color3.fromRGB(8, 1, 3)
+    local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 260, 0, 200), UDim2.new(0.5, -130, 0.4, -100), Color3.fromRGB(8, 1, 3)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 20)
     local IS = Instance.new("UIStroke", It) IS.Color, IS.Thickness = Color3.fromRGB(255, 10, 50), 3
     
-    -- AVATAR SCANNER GLOW HOUSING
     local Av = Instance.new("ImageLabel", It) Av.Size, Av.Position, Av.BackgroundColor3 = UDim2.new(0, 72, 0, 72), UDim2.new(0.5, -36, 0, 20), Color3.fromRGB(25, 4, 8)
     Instance.new("UICorner", Av).CornerRadius = UDim.new(1, 0)
     local AS = Instance.new("UIStroke", Av) AS.Color, AS.Thickness = Color3.fromRGB(255, 10, 50), 2
     pcall(function() Av.Image = P:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
     
-    -- HUD MATRICES DESIGN ACCENTS
     local Flare = Instance.new("Frame", It) Flare.Size, Flare.Position, Flare.BackgroundColor3, Flare.BackgroundTransparency, Flare.BorderSizePixel = UDim2.new(1, -40, 0, 1), UDim2.new(0, 20, 0, 105), Color3.fromRGB(255, 10, 50), 0.4, 0
-    
     local Lb = Instance.new("TextLabel", It) Lb.Size, Lb.Position, Lb.Text, Lb.TextColor3, Lb.TextSize, Lb.Font, Lb.BackgroundTransparency = UDim2.new(1, 0, 0, 20), UDim2.new(0, 0, 0, 115), "INITIALIZING MATRIX INTERFACE...", Color3.fromRGB(255, 235, 240), 9, Enum.Font.Code, 1
     
-    -- TRIPLE-STAGE HYPER GLOW PROGRESS LOADER
-    local BB = Instance.new("Frame", It) BB.Size, BB.Position, BB.BackgroundColor3, BB.BorderSizePixel = UDim2.new(0, 220, 0, 4), UDim2.new(0.5, -110, 0, 145), Color3.fromRGB(30, 4, 8), 0
+    local BB = Instance.new("Frame", It) BB.Size, BB.Position, BB.BackgroundColor3, BB.BorderSizePixel = UDim2.new(0, 200, 0, 4), UDim2.new(0.5, -100, 0, 145), Color3.fromRGB(30, 4, 8), 0
     Instance.new("UICorner", BB).CornerRadius = UDim.new(1, 0)
     local BBS = Instance.new("UIStroke", BB) BBS.Color, BBS.Thickness = Color3.fromRGB(70, 10, 20), 1
     
@@ -79,17 +83,14 @@ task.spawn(function()
     Instance.new("UICorner", BF).CornerRadius = UDim.new(1, 0)
     local G = Instance.new("UIGradient", BF) G.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 0, 25)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 10, 50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 180, 200))})
     
-    -- OVER-SATURATED AMBIENT LIGHT RADIAL UNDERLAY
     local Glow = Instance.new("Frame", BB) Glow.Size, Glow.BackgroundColor3, Glow.BackgroundTransparency, Glow.BorderSizePixel, Glow.ZIndex = UDim2.new(0, 0, 4, 8), Color3.fromRGB(255, 10, 50), 0.7, 0, 0
     Glow.Position = UDim2.new(0, 0, -1.5, 0)
     Instance.new("UICorner", Glow).CornerRadius = UDim.new(1, 0)
     
-    -- EXPONENTIAL KINETIC INTRO INTERPOLATION
     local ti = TweenInfo.new(3.0, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
     T:Create(BF, ti, {Size = UDim2.new(1, 0, 1, 0)}):Play()
     T:Create(Glow, ti, {Size = UDim2.new(1, 0, 4, 8)}):Play()
     
-    -- REAL-TIME PERCENTAGE CALCULATOR DISPLAY
     task.spawn(function()
         for i = 1, 100 do
             Lb.Text = "CONNECTING PROTOCOL // DATA_STREAM_["..tostring(i).."%]"
@@ -99,8 +100,6 @@ task.spawn(function()
     end)
     
     task.wait(3.4)
-    
-    -- DISINTEGRATION DISMISSAL TRANSITION
     local out = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     T:Create(It, out, {BackgroundTransparency = 1, Size = UDim2.new(0, 200, 0, 120), Position = UDim2.new(0.5, -100, 0.4, -60)}):Play()
     T:Create(IS, out, {Transparency = 1}):Play()
@@ -114,6 +113,7 @@ task.spawn(function()
     T:Create(Flare, out, {BackgroundTransparency = 1}):Play()
     
     task.wait(0.45) It:Destroy() M.Visible, Tg.Visible = true, true
+    ClampToScreen()
 end)
 
 local function SU(ch)
