@@ -30,39 +30,36 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
--- DYNAMIC ENGINE LOCK FOR EXACT POTATO VISUALS & DARK COMP-LIGHTING
+-- REALISTIC DARK LIGHTING & TOTAL SMOOTH PLASTIC SYSTEM
 game:GetService("RunService").RenderStepped:Connect(function()
     if not Opt then return end
     pcall(function()
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
         local lighting = game:GetService("Lighting")
         
-        -- FORCES ACTUAL DARK FFLAG COLOR LAYOUT
-        lighting.GlobalShadows = false
-        lighting.Ambient = Color3.fromRGB(25, 25, 25)
-        lighting.OutdoorAmbient = Color3.fromRGB(25, 25, 25)
-        lighting.Brightness = 0.4
-        lighting.FogEnd = 9e9
+        -- FORCES HIGH-CONTRAST COMPETITIVE DARK SHADOW MAP
+        lighting.GlobalShadows = true
+        lighting.Ambient = Color3.fromRGB(10, 10, 10)
+        lighting.OutdoorAmbient = Color3.fromRGB(10, 10, 10)
+        lighting.Brightness = 0.2
+        lighting.EnvironmentDiffuseScale = 0
+        lighting.EnvironmentSpecularScale = 0
         
-        -- REMOVES POST-PROCESSING GRAPHICS OVERHEAD
         for _,g in ipairs(lighting:GetChildren()) do 
-            if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then 
-                g.Enabled = false 
-            end 
+            if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then g.Enabled = false end 
         end
         
-        -- REPLACES WORLD MATERIAL WITH SMOOTH PLASTIC IN REAL TIME
         for _,v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                v.CastShadow = false
                 v.Material = Enum.Material.SmoothPlastic
                 v.MaterialVariant = ""
                 if v:IsA("MeshPart") or v:IsA("UnionOperation") then
                     v.RenderFidelity = Enum.RenderFidelity.Performance
                     v.LevelOfDetail = Enum.LevelOfDetail.Low
+                    pcall(function() v.TextureID = "" end) -- Nukes embedded court designs
                 end
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
-                v:Destroy()
+            elseif v:IsA("SurfaceAppearance") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
+                v:Destroy() -- Strips custom court decals instantly
             elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
                 if not v:IsDescendantOf(LP.Character) then v:Destroy() end
             elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then
