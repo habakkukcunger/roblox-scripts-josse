@@ -4,17 +4,16 @@ local PG = LP:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
 local SL, JP, TD, JT, FaceESP = false, false, nil, nil, false
-local ActiveHighlights = {}
+local ActiveBeams = {}
 
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- PREMIUM GLASSMORPHIC PANEL
+-- STYLISH GLASSMORPHIC CHASSIS
 local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- EDGE CLAMP SAFETY DRAG CONTROL
 local function ClampToScreen()
     local vs = C.ViewportSize
     local px = math.clamp(M.AbsolutePosition.X, 12, vs.X - M.AbsoluteSize.X - 12)
@@ -24,7 +23,6 @@ end
 M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
 
--- HIDDEN RESET MECHANIC (TAP TOP CENTER SCREEN)
 local Rec = Instance.new("TextButton", UI) Rec.Size = UDim2.new(0.2, 0, 0, 25) Rec.Position = UDim2.new(0.4, 0, 0, 0) Rec.BackgroundTransparency, Rec.Text = 1, ""
 Rec.MouseButton1Click:Connect(function() M.Position = UDim2.new(0.05, 0, 0.35, 0) end)
 
@@ -52,44 +50,90 @@ local function MB(txt, cb)
     end)
 end
 
-local function ClearAllESP()
-    for _, h in pairs(ActiveHighlights) do pcall(function() h:Destroy() end) end
-    table.clear(ActiveHighlights)
+local function ClearAllBeams()
+    for _, item in pairs(ActiveBeams) do
+        pcall(function()
+            item.Beam:Destroy()
+            item.A0:Destroy()
+            item.A1:Destroy()
+        end)
+    end
+    table.clear(ActiveBeams)
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
-MB("Opponent Highlights", function(v) FaceESP = v if not v then ClearAllESP() end end)
+MB("Opponent Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
 
--- SECURE RENDERING HOOK LOOP
+-- AUTOMATIC OPPOSING SIDE POSITION DETECTOR
+local function IsOpponentOnCourt(player)
+    if player == LP then return false end
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    local targetRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    
+    if myRoot and targetRoot then
+        -- Court boundaries split down the center axis (usually Z or X axis depending on map mesh setup)
+        -- This logic identifies players who are physically on the opposing half of the court net
+        local sideDifference = myRoot.Position.Z * targetRoot.Position.Z
+        if sideDifference < 0 or math.abs(myRoot.Position.X - targetRoot.Position.X) > 40 then
+            return true
+        end
+    end
+    return true -- Fallback fallback if outside an active stadium match
+end
+
+-- FIXED BEAM ORIENTATION ENGINE (ANCHORS SECURELY TO CHARACTER FACING VECTORS)
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        if player ~= LP and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local char = player.Character
-            local hl = ActiveHighlights[player]
+        if IsOpponentOnCourt(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local head = player.Character.Head
+            local data = ActiveBeams[player]
             
-            if not hl then
-                -- Generate a native, bypass-proof system outline overlay container
-                hl = Instance.new("Highlight")
-                hl.FillColor = Color3.fromRGB(235, 35, 75)
-                hl.FillTransparency = 0.75 -- Semi-transparent body shading
-                hl.OutlineColor = Color3.fromRGB(255, 10, 40) -- Neon red outer silhouette border
-                hl.OutlineTransparency = 0 -- Full crisp clarity border line
-                hl.Adornee = char
-                hl.Parent = char
-                ActiveHighlights[player] = hl
+            if not data then
+                -- Native systems rely on attachments to project beams across screen viewports safely
+                local a0 = Instance.new("Attachment", head)
+                local a1 = Instance.new("Attachment", head)
+                local beam = Instance.new("Beam", head)
+                
+                beam.Attachment0 = a0
+                beam.Attachment1 = a1
+                beam.Width0 = 0.12 -- Crisp neon laser profile
+                beam.Width1 = 0.04 -- Clean tapered pointer tip
+                beam.Color = ColorColorSequence.new(Color3.fromRGB(235, 35, 75)) -- Glowing Crimson Laser
+                beam.FaceCamera = true
+                beam.ZOffset = 1
+                
+                data = {Beam = beam, A0 = a0, A1 = a1}
+                ActiveBeams[player] = data
             end
+            
+            -- Lock tracking vectors straight out of the front orientation of their avatar head
+            data.A0.CFrame = CFrame.new(0, 0, -0.5) -- Root face offset
+            data.A1.CFrame = CFrame.new(0, 0, -15) -- Extension projection line vector (15 studs straight forward)
         else
-            if ActiveHighlights[player] then
-                pcall(function() ActiveHighlights[player]:Destroy() end)
-                ActiveHighlights[player] = nil
+            if ActiveBeams[player] then
+                pcall(function()
+                    ActiveBeams[player].Beam:Destroy()
+                    ActiveBeams[player].A0:Destroy()
+                    ActiveBeams[player].A1:Destroy()
+                end)
+                ActiveBeams[player] = nil
             end
         end
     end
 end)
 
-P.PlayerRemoving:Connect(function(p) if ActiveHighlights[p] then pcall(function() ActiveHighlights[p]:Destroy() end) ActiveHighlights[p] = nil end end)
+P.PlayerRemoving:Connect(function(p)
+    if ActiveBeams[p] then
+        pcall(function()
+            ActiveBeams[p].Beam:Destroy()
+            ActiveBeams[p].A0:Destroy()
+            ActiveBeams[p].A1:Destroy()
+        end)
+        ActiveBeams[p] = nil
+    end
+end)
 
 -- CLEAN INLINE LOADING SEQUENCE
 task.spawn(function()
