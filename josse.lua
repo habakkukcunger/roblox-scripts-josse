@@ -4,17 +4,17 @@ local PG = LP:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
 local SL, JP, TD, JT, FaceESP = false, false, nil, nil, false
-local ActiveLines = {}
+local ActiveHighlights = {}
 
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- STYLISH GLASSMORPHIC COMPACT CHASSIS
+-- PREMIUM GLASSMORPHIC PANEL
 local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- SCREENSIDE CLAMP (STAYS 100% IN BOUNDS)
+-- EDGE CLAMP SAFETY DRAG CONTROL
 local function ClampToScreen()
     local vs = C.ViewportSize
     local px = math.clamp(M.AbsolutePosition.X, 12, vs.X - M.AbsoluteSize.X - 12)
@@ -24,7 +24,7 @@ end
 M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
 
--- HIDDEN RESET BUTTON (TAP TOP CENTER)
+-- HIDDEN RESET MECHANIC (TAP TOP CENTER SCREEN)
 local Rec = Instance.new("TextButton", UI) Rec.Size = UDim2.new(0.2, 0, 0, 25) Rec.Position = UDim2.new(0.4, 0, 0, 0) Rec.BackgroundTransparency, Rec.Text = 1, ""
 Rec.MouseButton1Click:Connect(function() M.Position = UDim2.new(0.05, 0, 0.35, 0) end)
 
@@ -52,45 +52,44 @@ local function MB(txt, cb)
     end)
 end
 
-local function ClearAllLines()
-    for _, l in pairs(ActiveLines) do pcall(function() l:Destroy() end) end
-    table.clear(ActiveLines)
+local function ClearAllESP()
+    for _, h in pairs(ActiveHighlights) do pcall(function() h:Destroy() end) end
+    table.clear(ActiveHighlights)
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
-MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllLines() end end)
+MB("Opponent Highlights", function(v) FaceESP = v if not v then ClearAllESP() end end)
 
--- FIXED PACKET ENGINE: TARGETS ALL PLAYERS GUARANTEED WITH NO DECEPTIVE TEAM FILTERING
+-- SECURE RENDERING HOOK LOOP
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        if player ~= LP and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = player.Character.Head
-            local line = ActiveLines[player]
+        if player ~= LP and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local char = player.Character
+            local hl = ActiveHighlights[player]
             
-            if not line then
-                line = Instance.new("CylinderHandleAdornment")
-                line.Height = 12 -- Length of laser projection line
-                line.Radius = 0.06 -- Thin modern profile outline
-                line.Color3 = Color3.fromRGB(235, 35, 75)
-                line.AlwaysOnTop = true
-                line.ZIndex = 5
-                line.Parent = workspace
-                ActiveLines[player] = line
+            if not hl then
+                -- Generate a native, bypass-proof system outline overlay container
+                hl = Instance.new("Highlight")
+                hl.FillColor = Color3.fromRGB(235, 35, 75)
+                hl.FillTransparency = 0.75 -- Semi-transparent body shading
+                hl.OutlineColor = Color3.fromRGB(255, 10, 40) -- Neon red outer silhouette border
+                hl.OutlineTransparency = 0 -- Full crisp clarity border line
+                hl.Adornee = char
+                hl.Parent = char
+                ActiveHighlights[player] = hl
             end
-            
-            line.CFrame = CFrame.new(head.Position + (head.CFrame.LookVector * 6), head.Position) * CFrame.Angles(math.pi/2, 0, 0)
         else
-            if ActiveLines[player] then
-                pcall(function() ActiveLines[player]:Destroy() end)
-                ActiveLines[player] = nil
+            if ActiveHighlights[player] then
+                pcall(function() ActiveHighlights[player]:Destroy() end)
+                ActiveHighlights[player] = nil
             end
         end
     end
 end)
 
-P.PlayerRemoving:Connect(function(p) if ActiveLines[p] then pcall(function() ActiveLines[p]:Destroy() end) ActiveLines[p] = nil end end)
+P.PlayerRemoving:Connect(function(p) if ActiveHighlights[p] then pcall(function() ActiveHighlights[p]:Destroy() end) ActiveHighlights[p] = nil end end)
 
 -- CLEAN INLINE LOADING SEQUENCE
 task.spawn(function()
