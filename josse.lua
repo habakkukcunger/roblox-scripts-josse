@@ -62,55 +62,39 @@ local function ClearAllBeams()
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
-MB("Opponent Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
+MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
 
--- AUTOMATIC OPPOSING SIDE POSITION DETECTOR
-local function IsOpponentOnCourt(player)
-    if player == LP then return false end
-    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    local targetRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    
-    if myRoot and targetRoot then
-        -- Court boundaries split down the center axis (usually Z or X axis depending on map mesh setup)
-        -- This logic identifies players who are physically on the opposing half of the court net
-        local sideDifference = myRoot.Position.Z * targetRoot.Position.Z
-        if sideDifference < 0 or math.abs(myRoot.Position.X - targetRoot.Position.X) > 40 then
-            return true
-        end
-    end
-    return true -- Fallback fallback if outside an active stadium match
-end
-
--- FIXED BEAM ORIENTATION ENGINE (ANCHORS SECURELY TO CHARACTER FACING VECTORS)
+-- RUNTIME BEAM LOGIC
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        if IsOpponentOnCourt(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+        if player ~= LP and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
             local data = ActiveBeams[player]
             
             if not data then
-                -- Native systems rely on attachments to project beams across screen viewports safely
                 local a0 = Instance.new("Attachment", head)
                 local a1 = Instance.new("Attachment", head)
                 local beam = Instance.new("Beam", head)
                 
                 beam.Attachment0 = a0
                 beam.Attachment1 = a1
-                beam.Width0 = 0.12 -- Crisp neon laser profile
-                beam.Width1 = 0.04 -- Clean tapered pointer tip
-                beam.Color = ColorColorSequence.new(Color3.fromRGB(235, 35, 75)) -- Glowing Crimson Laser
+                beam.Width0 = 0.15 
+                beam.Width1 = 0.05 
+                -- FIXED: Passed correct ColorSequence instantiation format
+                beam.Color = ColorSequence.new(Color3.fromRGB(235, 35, 75)) 
                 beam.FaceCamera = true
+                beam.LightEmission = 0.5
                 beam.ZOffset = 1
                 
                 data = {Beam = beam, A0 = a0, A1 = a1}
                 ActiveBeams[player] = data
             end
             
-            -- Lock tracking vectors straight out of the front orientation of their avatar head
-            data.A0.CFrame = CFrame.new(0, 0, -0.5) -- Root face offset
-            data.A1.CFrame = CFrame.new(0, 0, -15) -- Extension projection line vector (15 studs straight forward)
+            -- Keep attachments firmly pinned forward out of the head asset face orientation
+            data.A0.CFrame = CFrame.new(0, 0, -0.6) 
+            data.A1.CFrame = CFrame.new(0, 0, -25) -- Laser beam reaches 25 studs long across the net
         else
             if ActiveBeams[player] then
                 pcall(function()
@@ -135,7 +119,7 @@ P.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- CLEAN INLINE LOADING SEQUENCE
+-- INITIALIZER OVERLAY
 task.spawn(function()
     local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
