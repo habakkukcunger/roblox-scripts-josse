@@ -6,71 +6,75 @@ if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 local SL, JP, TD, JT = false, false, nil, nil
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- SLEEK GLASSMORPHIC MINIMALIST DESIGN (NO CORNY SCI-FI LOGS)
-local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 230, 0, 100) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(15, 15, 15) M.BackgroundTransparency = 0.2 M.Active, M.Draggable, M.Visible = true, true, false
-Instance.new("UICorner", M).CornerRadius = UDim.new(0, 10)
-local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(220, 20, 60), 1.5
-local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 12), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
+-- STYLISH DARK GLASS CHASSIS (NO CORNY SCI-FI MATRIX STUFF)
+local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 95) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
+Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
+local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
+local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- RIGID SCREEN CLAMP (FORCES UI TO STAY 100% IN BOUNDS)
+-- TOTAL EDGE LOCK MECHANISM
 local function ClampToScreen()
-    M.Position = UDim2.new(
-        0, math.clamp(M.AbsolutePosition.X, 10, C.ViewportSize.X - M.AbsoluteSize.X - 10),
-        0, math.clamp(M.AbsolutePosition.Y, 30, C.ViewportSize.Y - M.AbsoluteSize.Y - 30)
-    )
+    local vs = C.ViewportSize
+    local px = math.clamp(M.AbsolutePosition.X, 12, vs.X - M.AbsoluteSize.X - 12)
+    local py = math.clamp(M.AbsolutePosition.Y, 35, vs.Y - M.AbsoluteSize.Y - 35)
+    M.Position = UDim2.new(0, px, 0, py)
 end
 M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
 
--- MINIMAL TEXT VIEWPORT (CLEAN INTERFACE)
-local Tl = Instance.new("TextLabel", M) Tl.Size = UDim2.new(1, -24, 0, 20) Tl.Text = "JOSSERPOPSIER HUB V6" Tl.TextColor3 = Color3.fromRGB(240, 240, 240) Tl.TextSize, Tl.Font, Tl.TextXAlignment, Tl.BackgroundTransparency = 13, Enum.Font.GothamBold, Enum.TextXAlignment.Left, 1
+-- HIDDEN RECOVERY INVISIBLE PANIC PANEL (TAP TOP CENTER TO RESET POSITION)
+local Rec = Instance.new("TextButton", UI) Rec.Size = UDim2.new(0.2, 0, 0, 25) Rec.Position = UDim2.new(0.4, 0, 0, 0) Rec.BackgroundTransparency, Rec.Text = 1, ""
+Rec.MouseButton1Click:Connect(function() M.Position = UDim2.new(0.05, 0, 0.35, 0) end)
 
--- TOP CONTROL BAR SWITCH
-local Tg = Instance.new("TextButton", UI) Tg.Size = UDim2.new(0, 80, 0, 26) Tg.Position = UDim2.new(1, -100, 0, 45) Tg.Text, Tg.TextColor3, Tg.Font, Tg.TextSize, Tg.BackgroundColor3, Tg.Visible = "CLOSE", Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 10, Color3.fromRGB(20, 20, 20), false
-Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 6)
-local TS = Instance.new("UIStroke", Tg) TS.Color, TS.Thickness = Color3.fromRGB(220, 20, 60), 1
-Tg.MouseButton1Click:Connect(function() M.Visible = not M.Visible Tg.Text = M.Visible and "CLOSE" or "OPEN" end)
+-- HIGH-END COMPACT TITLEBAR
+local Tl = Instance.new("TextLabel", M) Tl.Size = UDim2.new(1, -20, 0, 16) Tl.Text = "JOSSERPOPSIER // V6" Tl.TextColor3 = Color3.fromRGB(255, 255, 255) Tl.TextSize, Tl.Font, Tl.TextXAlignment, Tl.BackgroundTransparency = 11, Enum.Font.GothamBold, Enum.TextXAlignment.Left, 1
+
+-- DECREASED OVERLAY BUTTON SIZE FOR PREMIUM COMPACTNESS
+local Tg = Instance.new("TextButton", UI) Tg.Size = UDim2.new(0, 65, 0, 24) Tg.Position = UDim2.new(1, -85, 0, 45) Tg.Text, Tg.TextColor3, Tg.Font, Tg.TextSize, Tg.BackgroundColor3, Tg.Visible = "HIDE", Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 9, Color3.fromRGB(15, 15, 18), false
+Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 5)
+local TS = Instance.new("UIStroke", Tg) TS.Color, TS.Thickness = Color3.fromRGB(235, 35, 75), 1
+Tg.MouseButton1Click:Connect(function() M.Visible = not M.Visible Tg.Text = M.Visible and "HIDE" or "SHOW" end)
 
 local function MB(txt, cb)
-    local Cd = Instance.new("Frame", M) Cd.Size, Cd.BackgroundColor3, Cd.BorderSizePixel = UDim2.new(1, -24, 0, 36), Color3.fromRGB(25, 25, 25), 0
-    Instance.new("UICorner", Cd).CornerRadius = UDim.new(0, 6)
-    local Lb = Instance.new("TextLabel", Cd) Lb.Size, Lb.Position, Lb.Text, Lb.TextColor3, Lb.TextSize, Lb.Font, Lb.TextXAlignment, Lb.BackgroundTransparency = UDim2.new(1, -80, 1, 0), UDim2.new(0, 12, 0, 0), txt, Color3.fromRGB(200, 200, 200), 12, Enum.Font.GothamMedium, Enum.TextXAlignment.Left, 1
+    local Cd = Instance.new("Frame", M) Cd.Size, Cd.BackgroundColor3, Cd.BorderSizePixel = UDim2.new(1, -20, 0, 34), Color3.fromRGB(18, 18, 22), 0
+    Instance.new("UICorner", Cd).CornerRadius = UDim.new(0, 5)
+    local Lb = Instance.new("TextLabel", Cd) Lb.Size, Lb.Position, Lb.Text, Lb.TextColor3, Lb.TextSize, Lb.Font, Lb.TextXAlignment, Lb.BackgroundTransparency = UDim2.new(1, -75, 1, 0), UDim2.new(0, 10, 0, 0), txt, Color3.fromRGB(210, 210, 215), 11, Enum.Font.GothamMedium, Enum.TextXAlignment.Left, 1
     
-    local B = Instance.new("TextButton", Cd) B.Size, B.Position, B.Text, B.Font, B.TextSize, B.BackgroundColor3, B.TextColor3 = UDim2.new(0, 55, 0, 22), UDim2.new(1, -67, 0, 7), "OFF", Enum.Font.GothamBold, 10, Color3.fromRGB(35, 35, 35), Color3.fromRGB(150, 150, 150)
+    local B = Instance.new("TextButton", Cd) B.Size, B.Position, B.Text, B.Font, B.TextSize, B.BackgroundColor3, B.TextColor3 = UDim2.new(0, 48, 0, 20), UDim2.new(1, -58, 0, 7), "OFF", Enum.Font.GothamBold, 9, Color3.fromRGB(28, 28, 34), Color3.fromRGB(140, 140, 145)
     Instance.new("UICorner", B).CornerRadius = UDim.new(0, 4)
     
     local st = false B.MouseButton1Click:Connect(function()
         st = not st 
         B.Text = st and "ON" or "OFF"
-        B.BackgroundColor3 = st and Color3.fromRGB(220, 20, 60) or Color3.fromRGB(35, 35, 35)
-        B.TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+        B.BackgroundColor3 = st and Color3.fromRGB(235, 35, 75) or Color3.fromRGB(28, 28, 34)
+        B.TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
         cb(st)
     end)
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
 
--- CLEAN LOADING BAR WITHOUT TEXT CLUTTER
+-- STEALTH SPLASH INITIALIZER
 task.spawn(function()
-    local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 200, 0, 50), UDim2.new(0.5, -100, 0.45, -25), Color3.fromRGB(15, 15, 15)
-    Instance.new("UICorner", It).CornerRadius = UDim.new(0, 8)
-    local IS = Instance.new("UIStroke", It) IS.Color, IS.Thickness = Color3.fromRGB(220, 20, 60), 1.5
+    local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
+    Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
+    local IS = Instance.new("UIStroke", It) IS.Color, IS.Thickness = Color3.fromRGB(235, 35, 75), 1.2
     
-    local BB = Instance.new("Frame", It) BB.Size, BB.Position, BB.BackgroundColor3, BB.BorderSizePixel = UDim2.new(1, -32, 0, 4), UDim2.new(0, 16, 0.5, -2), Color3.fromRGB(30, 30, 30), 0
+    local BB = Instance.new("Frame", It) BB.Size, BB.Position, BB.BackgroundColor3, BB.BorderSizePixel = UDim2.new(1, -24, 0, 3), UDim2.new(0, 12, 0.5, -1), Color3.fromRGB(24, 24, 30), 0
     Instance.new("UICorner", BB).CornerRadius = UDim.new(1, 0)
-    local BF = Instance.new("Frame", BB) BF.Size, BF.BackgroundColor3, BF.BorderSizePixel = UDim2.new(0, 0, 1, 0), Color3.fromRGB(220, 20, 60), 0
+    local BF = Instance.new("Frame", BB) BF.Size, BF.BackgroundColor3, BF.BorderSizePixel = UDim2.new(0, 0, 1, 0), Color3.fromRGB(235, 35, 75), 0
     Instance.new("UICorner", BF).CornerRadius = UDim.new(1, 0)
     
-    T:Create(BF, TweenInfo.new(2.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
-    task.wait(2.4)
+    T:Create(BF, TweenInfo.new(1.8, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+    task.wait(2.0)
     
-    local out = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    local out = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     T:Create(It, out, {BackgroundTransparency = 1}):Play()
     T:Create(IS, out, {Transparency = 1}):Play()
     T:Create(BB, out, {BackgroundTransparency = 1}):Play()
     T:Create(BF, out, {BackgroundTransparency = 1}):Play()
     
-    task.wait(0.3) It:Destroy() M.Visible, Tg.Visible = true, true
+    task.wait(0.25) It:Destroy() M.Visible, Tg.Visible = true, true
     ClampToScreen()
 end)
 
