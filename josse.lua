@@ -8,7 +8,6 @@ local ActiveBeams = {}
 
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- STYLISH GLASSMORPHIC CHASSIS
 local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
@@ -51,13 +50,7 @@ local function MB(txt, cb)
 end
 
 local function ClearAllBeams()
-    for _, item in pairs(ActiveBeams) do
-        pcall(function()
-            item.Beam:Destroy()
-            item.A0:Destroy()
-            item.A1:Destroy()
-        end)
-    end
+    for _, item in pairs(ActiveBeams) do pcall(function() item.Beam:Destroy() item.A0:Destroy() item.A1:Destroy() end) end
     table.clear(ActiveBeams)
 end
 
@@ -66,81 +59,42 @@ MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() en
 
 local function IsTeammate(player)
     if player == LP then return true end
-    if LP.Team and player.Team then
-        if LP.Team == player.Team then return true end
-    end
-    if LP.TeamColor and player.TeamColor then
-        if LP.TeamColor == player.TeamColor then return true end
-    end
-    local myChar = LP.Character
-    local targetChar = player.Character
-    if myChar and targetChar and myChar.Parent == targetChar.Parent and myChar.Parent.Name:lower():match("team") then
-        return true
-    end
+    if LP.Team and player.Team and LP.Team == player.Team then return true end
+    if LP.TeamColor and player.TeamColor and LP.TeamColor == player.TeamColor then return true end
+    local myChar, targetChar = LP.Character, player.Character
+    if myChar and targetChar and myChar.Parent == targetChar.Parent and myChar.Parent.Name:lower():match("team") then return true end
     return false
 end
 
--- RUNTIME BEAM LOGIC WITH INCREASED VISIBILITY AND THICKNESS
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
-    
     for _, player in ipairs(P:GetPlayers()) do
         if player ~= LP and not IsTeammate(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
+            local root = player.Character:FindFirstChild("HumanoidRootPart") or head
             local data = ActiveBeams[player]
             
             if not data then
-                local a0 = Instance.new("Attachment", head)
-                local a1 = Instance.new("Attachment", head)
-                local beam = Instance.new("Beam", head)
-                
-                beam.Attachment0 = a0
-                beam.Attachment1 = a1
-                
-                -- INCREASED WIDTH FOR HIGH MOBILITY VISIBILITY
-                beam.Width0 = 0.45 
-                beam.Width1 = 0.20 
-                
-                -- ULTRA HIGH-CONTRAST CHROME GREEN COLOR (CUTS THROUGH THE CRIMSON UI AND ALL GYM LIGHTING)
-                beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 120)) 
-                beam.FaceCamera = true
-                
-                -- BOOSTED BRIGHTNESS VALUE TO MAKE IT POP IN DARK ARENAS
-                beam.LightEmission = 1.0
-                beam.LightInfluence = 0.0
-                beam.ZOffset = 2
-                
+                local a0, a1, beam = Instance.new("Attachment", workspace.Terrain), Instance.new("Attachment", workspace.Terrain), Instance.new("Beam", workspace.Terrain)
+                beam.Attachment0, beam.Attachment1 = a0, a1
+                beam.Width0, beam.Width1, beam.Color = 0.45, 0.20, ColorSequence.new(Color3.fromRGB(0, 255, 120))
+                beam.FaceCamera, beam.LightEmission, beam.LightInfluence, beam.ZOffset = true, 1.0, 0.0, 2
                 data = {Beam = beam, A0 = a0, A1 = a1}
                 ActiveBeams[player] = data
             end
             
-            data.A0.CFrame = CFrame.new(0, 0, -0.6) 
-            data.A1.CFrame = CFrame.new(0, 0, -30) -- Extended distance to track deep spikes easily
+            local look = root.CFrame.LookVector
+            local flat = Vector3.new(look.X, 0, look.Z).Unit
+            data.A0.WorldPosition = head.Position + (flat * 0.6)
+            data.A1.WorldPosition = head.Position + (flat * 30)
         else
-            if ActiveBeams[player] then
-                pcall(function()
-                    ActiveBeams[player].Beam:Destroy()
-                    ActiveBeams[player].A0:Destroy()
-                    ActiveBeams[player].A1:Destroy()
-                end)
-                ActiveBeams[player] = nil
-            end
+            if ActiveBeams[player] then pcall(function() ActiveBeams[player].Beam:Destroy() ActiveBeams[player].A0:Destroy() ActiveBeams[player].A1:Destroy() end) ActiveBeams[player] = nil end
         end
     end
 end)
 
-P.PlayerRemoving:Connect(function(p)
-    if ActiveBeams[p] then
-        pcall(function()
-            ActiveBeams[p].Beam:Destroy()
-            ActiveBeams[p].A0:Destroy()
-            ActiveBeams[p].A1:Destroy()
-        end)
-        ActiveBeams[p] = nil
-    end
-end)
+P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p] = nil end end)
 
--- INITIALIZER OVERLAY
 task.spawn(function()
     local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
