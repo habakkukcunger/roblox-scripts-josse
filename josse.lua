@@ -3,12 +3,12 @@ local LP, C = P.LocalPlayer, workspace.CurrentCamera
 local PG = LP:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
-local SL, JP, TD, JT, FaceESP = false, false, nil, nil, false
+local SL, JP, TD, JT, FaceESP, Opt = false, false, nil, nil, false, false
 local ActiveBeams = {}
 
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
-local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
+local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 175) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
@@ -54,8 +54,30 @@ local function ClearAllBeams()
     table.clear(ActiveBeams)
 end
 
+local function RunOptimization()
+    task.spawn(function()
+        while Opt do
+            pcall(function()
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.CastShadow = false
+                        if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity = Enum.RenderFidelity.Performance end
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    elseif v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+                        v.Enabled = false
+                    end
+                end
+            end)
+            task.wait(5)
+        end
+    end)
+end
+
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
 MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
+MB("Engine Optimizer", function(v) Opt = v if v then RunOptimization() end end)
 
 local function IsTeammate(player)
     if player == LP then return true end
