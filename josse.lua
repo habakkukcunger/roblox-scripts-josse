@@ -30,28 +30,43 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
--- PERMANENT REAL-TIME POTATO LOCK
+-- DYNAMIC ENGINE LOCK FOR EXACT POTATO VISUALS & DARK COMP-LIGHTING
 game:GetService("RunService").RenderStepped:Connect(function()
     if not Opt then return end
     pcall(function()
-        settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
-        local lighting=game:GetService("Lighting")
-        if lighting.GlobalShadows then lighting.GlobalShadows=false end
-        for _,g in ipairs(lighting:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        local lighting = game:GetService("Lighting")
         
+        -- FORCES ACTUAL DARK FFLAG COLOR LAYOUT
+        lighting.GlobalShadows = false
+        lighting.Ambient = Color3.fromRGB(25, 25, 25)
+        lighting.OutdoorAmbient = Color3.fromRGB(25, 25, 25)
+        lighting.Brightness = 0.4
+        lighting.FogEnd = 9e9
+        
+        -- REMOVES POST-PROCESSING GRAPHICS OVERHEAD
+        for _,g in ipairs(lighting:GetChildren()) do 
+            if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then 
+                g.Enabled = false 
+            end 
+        end
+        
+        -- REPLACES WORLD MATERIAL WITH SMOOTH PLASTIC IN REAL TIME
         for _,v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                if v.CastShadow then v.CastShadow=false end
-                if v.Material~=Enum.Material.SmoothPlastic then v.Material=Enum.Material.SmoothPlastic end
-                if v.MaterialVariant~="" then v.MaterialVariant="" end
+                v.CastShadow = false
+                v.Material = Enum.Material.SmoothPlastic
+                v.MaterialVariant = ""
                 if v:IsA("MeshPart") or v:IsA("UnionOperation") then
-                    if v.RenderFidelity~=Enum.RenderFidelity.Performance then v.RenderFidelity=Enum.RenderFidelity.Performance end
-                    if v.LevelOfDetail~=Enum.LevelOfDetail.Low then v.LevelOfDetail=Enum.LevelOfDetail.Low end
+                    v.RenderFidelity = Enum.RenderFidelity.Performance
+                    v.LevelOfDetail = Enum.LevelOfDetail.Low
                 end
             elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
                 v:Destroy()
             elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
-                v:Destroy()
+                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
+            elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then
+                if not v:IsDescendantOf(LP) then v.Enabled = false end
             end
         end
     end)
