@@ -54,7 +54,7 @@ local function OptFn()
 end
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Player Face Lines",function(v) FaceESP=v if not v then CE() end end)
-MB("Engine Optimizer",function(v) Opt=v if v then OptFn() end end)
+MB("Fast Flags",function(v) Opt=v if v then OptFn() end end)
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 game:GetService("RunService").RenderStepped:Connect(function()
     if not FaceESP then return end
