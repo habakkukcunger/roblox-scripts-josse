@@ -29,22 +29,24 @@ local function MB(txt,cb)
     end)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
-local function OptFn()
-    pcall(function()
-        local lighting=game:GetService("Lighting")
-        lighting.GlobalShadows=false
-        for _,g in ipairs(lighting:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
-    end)
+
+-- PERMANENT REAL-TIME POTATO LOCK
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not Opt then return end
     pcall(function()
         settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
+        local lighting=game:GetService("Lighting")
+        if lighting.GlobalShadows then lighting.GlobalShadows=false end
+        for _,g in ipairs(lighting:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
+        
         for _,v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                v.CastShadow=false
-                v.Material=Enum.Material.SmoothPlastic
-                v.MaterialVariant=""
+                if v.CastShadow then v.CastShadow=false end
+                if v.Material~=Enum.Material.SmoothPlastic then v.Material=Enum.Material.SmoothPlastic end
+                if v.MaterialVariant~="" then v.MaterialVariant="" end
                 if v:IsA("MeshPart") or v:IsA("UnionOperation") then
-                    v.RenderFidelity=Enum.RenderFidelity.Performance
-                    v.LevelOfDetail=Enum.LevelOfDetail.Low
+                    if v.RenderFidelity~=Enum.RenderFidelity.Performance then v.RenderFidelity=Enum.RenderFidelity.Performance end
+                    if v.LevelOfDetail~=Enum.LevelOfDetail.Low then v.LevelOfDetail=Enum.LevelOfDetail.Low end
                 end
             elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
                 v:Destroy()
@@ -53,10 +55,11 @@ local function OptFn()
             end
         end
     end)
-end
+end)
+
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Player Face Lines",function(v) FaceESP=v if not v then CE() end end)
-MB("Fast Flags",function(v) Opt=v if v then OptFn() end end)
+MB("Fast Flags",function(v) Opt=v end)
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 game:GetService("RunService").RenderStepped:Connect(function()
     if not FaceESP then return end
