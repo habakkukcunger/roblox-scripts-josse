@@ -64,12 +64,37 @@ end
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
 MB("Player Face Lines", function(v) FaceESP = v if not v then ClearAllBeams() end end)
 
--- RUNTIME BEAM LOGIC
+-- AUTOMATIC MULTI-CHECK TEAM FILTER (NATIVE TEAM + COLOR BACKUP)
+local function IsTeammate(player)
+    if player == LP then return true end
+    
+    -- Check 1: Check built-in Roblox Team values
+    if LP.Team and player.Team then
+        if LP.Team == player.Team then return true end
+    end
+    
+    -- Check 2: Check standard tab/leaderboard Team Colors
+    if LP.TeamColor and player.TeamColor then
+        if LP.TeamColor == player.TeamColor then return true end
+    end
+    
+    -- Check 3: Check common structural court object folder identifiers
+    local myChar = LP.Character
+    local targetChar = player.Character
+    if myChar and targetChar and myChar.Parent == targetChar.Parent and myChar.Parent.Name:lower():match("team") then
+        return true
+    end
+    
+    return false
+end
+
+-- RUNTIME BEAM LOGIC WITH AUTOMATIC TEAM FILTERING
 R.RenderStepped:Connect(function()
     if not FaceESP then return end
     
     for _, player in ipairs(P:GetPlayers()) do
-        if player ~= LP and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+        -- Block the beams from drawing if the player triggers a teammate confirmation match
+        if player ~= LP and not IsTeammate(player) and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
             local data = ActiveBeams[player]
             
@@ -82,7 +107,6 @@ R.RenderStepped:Connect(function()
                 beam.Attachment1 = a1
                 beam.Width0 = 0.15 
                 beam.Width1 = 0.05 
-                -- FIXED: Passed correct ColorSequence instantiation format
                 beam.Color = ColorSequence.new(Color3.fromRGB(235, 35, 75)) 
                 beam.FaceCamera = true
                 beam.LightEmission = 0.5
@@ -92,10 +116,10 @@ R.RenderStepped:Connect(function()
                 ActiveBeams[player] = data
             end
             
-            -- Keep attachments firmly pinned forward out of the head asset face orientation
             data.A0.CFrame = CFrame.new(0, 0, -0.6) 
-            data.A1.CFrame = CFrame.new(0, 0, -25) -- Laser beam reaches 25 studs long across the net
+            data.A1.CFrame = CFrame.new(0, 0, -25) 
         else
+            -- Instantly clear out lines if a teammate falls into the check boundaries
             if ActiveBeams[player] then
                 pcall(function()
                     ActiveBeams[player].Beam:Destroy()
