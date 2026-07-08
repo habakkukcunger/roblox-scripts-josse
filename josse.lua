@@ -30,31 +30,34 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
--- MOBILE MAP-DESTRUCTION CONTROLLER
 local function OptFn()
-    pcall(function()
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        local lighting = game:GetService("Lighting")
-        lighting.GlobalShadows = false
-        for _,g in ipairs(lighting:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled = false end end
-        
-        -- HIDES ALL EXTRA BACKGROUND CLUSTER CAUSING PERFORMANCE LAG
-        for _,v in ipairs(workspace:GetDescendants()) do
-            local name = v.Name:lower()
-            if v:IsA("BasePart") then
-                v.CastShadow = false
-                if name:match("stand") or name:match("chair") or name:match("prop") or name:match("tree") or name:match("plant") or name:match("crowd") or name:match("fan") or name:match("lobby") or name:match("bench") or name:match("light") or name:match("screen") or name:match("board") or name:match("stadium") then
-                    if not name:match("court") and not name:match("net") and not name:match("line") and not name:match("floor") and not v:IsDescendantOf(LP.Character) then
-                        v.Transparency = 1 v.CanCollide = false
+    task.spawn(function()
+        local l = game:GetService("Lighting")
+        l.GlobalShadows, l.FogEnd = false, 9e9
+        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled = false end end
+        local d = workspace:GetDescendants()
+        for idx,v in ipairs(d) do
+            if idx%100==0 then task.wait() end
+            pcall(function()
+                if LP.Character and v:IsDescendantOf(LP.Character) then return end
+                local n = v.Name:lower()
+                local core = n:match("court") or n:match("net") or n:match("line") or n:match("floor") or n:match("ball")
+                if v:IsA("BasePart") then
+                    v.CastShadow = false
+                    if not core then v.Material = Enum.Material.SmoothPlastic end
+                    if n:match("stand") or n:match("chair") or n:match("prop") or n:match("tree") or n:match("plant") or n:match("crowd") or n:match("fan") or n:match("lobby") or n:match("bench") or n:match("light") or n:match("screen") or n:match("board") or n:match("stadium") then
+                        if not core then v.Transparency, v.CanCollide = 1, false end
                     end
+                elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
+                    v.Enabled = false
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    if not n:match("court") and not n:match("line") then v:Destroy() end
+                elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
+                    v:Destroy()
+                elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") then
+                    v.Enabled = false
                 end
-            elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("Trail") then
-                v:Destroy()
-            elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
-                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
-            elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") then
-                if not v:IsDescendantOf(LP) then v.Enabled = false end
-            end
+            end)
         end
     end)
 end
@@ -86,7 +89,7 @@ task.spawn(function()
     local IS=Instance.new("UIStroke",It)IS.Color,IS.Thickness=Color3.fromRGB(235,35,75),1.2
     local BB=Instance.new("Frame",It)BB.Size,BB.Position,BB.BackgroundColor3,BB.BorderSizePixel=UDim2.new(1,-24,0,3),UDim2.new(0,12,0.5,-1),Color3.fromRGB(24,24,30),0
     Instance.new("UICorner",BB).CornerRadius=UDim.new(1,0)
-    local BF=Instance.new("Frame",BB)BF.Size,BF.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
+    local BF=Instance.new("Frame",BB)BF.Size,BB.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
     Instance.new("UICorner",BF).CornerRadius=UDim.new(1,0)
     T:Create(BF,TweenInfo.new(1.8,Enum.EasingStyle.Cubic,Enum.EasingDirection.Out),{Size=UDim2.new(1,0,1,0)}):Play()
     task.wait(2.0)
