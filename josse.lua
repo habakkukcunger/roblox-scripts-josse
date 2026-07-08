@@ -30,26 +30,23 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 local function OptFn()
-    task.spawn(function()
-        pcall(function()
-            local l=game:GetService("Lighting") l.GlobalShadows,l.FogEnd,l.OutdoorAmbient,l.Technology=false,9e9,Color3.fromRGB(150,150,150),Enum.Technology.Compatibility
-            for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
-        end)
-        while Opt do
-            pcall(function()
-                settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
-                for _,v in ipairs(workspace:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        v.CastShadow,v.Material,v.MaterialVariant=false,Enum.Material.SmoothPlastic,""
-                        if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity,v.LevelOfDetail=Enum.RenderFidelity.Performance,Enum.LevelOfDetail.Low end
-                    elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("Trail") then v.Enabled=false
-                    elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then v:Destroy()
-                    elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then if not v:IsDescendantOf(LP) then v.Enabled=false end end
-                end
-                local m=workspace:FindFirstChild("Map") or workspace:FindFirstChild("Arena")
-                if m then for _,o in ipairs(m:GetDescendants()) do if (o:IsA("BasePart") or o:IsA("Model")) and (o.Name:lower():match("stand") or o.Name:lower():match("chair") or o.Name:lower():match("prop") or o.Name:lower():match("tree") or o.Name:lower():match("plant") or o.Name:lower():match("crowd") or o.Name:lower():match("fan") or o.Name:lower():match("lobby") or o.Name:lower():match("bench") or o.Name:lower():match("light") or o.Name:lower():match("screen") or o.Name:lower():match("board")) then if o:IsA("BasePart") then o.Transparency=1 o.CanCollide=false elseif o:IsA("Model") then for _,p in ipairs(o:GetChildren()) do if p:IsA("BasePart") then p.Transparency=1 p.CanCollide=false end end end end end end
-            end) task.wait(3)
+    pcall(function()
+        local l=game:GetService("Lighting")
+        l.GlobalShadows,l.FogEnd,l.Ambient,l.OutdoorAmbient=false,0,Color3.fromRGB(0,0,0),Color3.fromRGB(0,0,0)
+        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then g:Destroy() end end
+    end)
+    pcall(function()
+        settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CastShadow,v.Material,v.MaterialVariant=false,Enum.Material.SmoothPlastic,""
+                if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity,v.LevelOfDetail,v.MeshId,v.TextureID=Enum.RenderFidelity.Performance,Enum.LevelOfDetail.Low,"","rbxassetid://0" end
+            elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("Trail") then v:Destroy()
+            elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then v:Destroy()
+            elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then if not v:IsDescendantOf(LP) then v.Enabled=false end end
         end
+        local m=workspace:FindFirstChild("Map") or workspace:FindFirstChild("Arena")
+        if m then for _,o in ipairs(m:GetDescendants()) do if (o:IsA("BasePart") or o:IsA("Model")) and (o.Name:lower():match("stand") or o.Name:lower():match("chair") or o.Name:lower():match("prop") or o.Name:lower():match("tree") or o.Name:lower():match("plant") or o.Name:lower():match("crowd") or o.Name:lower():match("fan") or o.Name:lower():match("lobby") or o.Name:lower():match("bench") or o.Name:lower():match("light") or o.Name:lower():match("screen") or o.Name:lower():match("board")) then if o:IsA("BasePart") then o.Transparency=1 o.CanCollide=false elseif o:IsA("Model") then for _,p in ipairs(o:GetChildren()) do if p:IsA("BasePart") then p.Transparency=1 p.CanCollide=false end end end end end end
     end)
 end
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
