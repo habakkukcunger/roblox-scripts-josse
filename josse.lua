@@ -1,80 +1,90 @@
 local P, T, R, U = game:GetService("Players"), game:GetService("TweenService"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, C = P.LocalPlayer, workspace.CurrentCamera
 local PlayerGui = LP:WaitForChild("PlayerGui")
-if PlayerGui:FindFirstChild("JHubV3") then PlayerGui.JHubV3:Destroy() end
+if PlayerGui:FindFirstChild("JHubV4") then PlayerGui.JHubV4:Destroy() end
 
 local Enabled, sl, targetDir, jumpThread, AutoSet = false, false, nil, nil, false
-local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV3" UI.ResetOnSpawn = false
+local UI = Instance.new("ScreenGui", PlayerGui) UI.Name = "JHubV4" UI.ResetOnSpawn = false
 
--- MODERN CYBER-AESTHETIC MAIN CONTAINER
-local Main = Instance.new("Frame", UI) Main.Size = UDim2.new(0, 250, 0, 160) Main.Position = UDim2.new(0.05, 0, 0.55, 0) Main.BackgroundColor3 = Color3.fromRGB(11, 12, 18) Main.Active, Main.Draggable, Main.Visible = true, true, false
-local UICorner = Instance.new("UICorner", Main) UICorner.CornerRadius = UDim.new(0, 12)
-local UIStroke = Instance.new("UIStroke", Main) UIStroke.Color = Color3.fromRGB(0, 170, 255) UIStroke.Thickness = 1.8
-local List = Instance.new("UIListLayout", Main) List.Padding = UDim.new(0, 8) List.HorizontalAlignment = Enum.HorizontalAlignment.Center
+-- CYBER-NEON PREMIUM MAIN PLATFORM
+local Main = Instance.new("Frame", UI) Main.Size = UDim2.new(0, 240, 0, 150) Main.Position = UDim2.new(0.05, 0, 0.55, 0) Main.BackgroundColor3 = Color3.fromRGB(10, 11, 16) Main.Active, Main.Draggable, Main.Visible = true, true, false
+local UICorner = Instance.new("UICorner", Main) UICorner.CornerRadius = UDim.new(0, 10)
+local UIStroke = Instance.new("UIStroke", Main) UIStroke.Color = Color3.fromRGB(0, 170, 255) UIStroke.Thickness = 1.5
+local List = Instance.new("UIListLayout", Main) List.Padding = UDim.new(0, 6) List.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 35) Title.Text = "  josserpopsier hub v3" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 13 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
-local UILine = Instance.new("Frame", Main) UILine.Size = UDim2.new(0, 230, 0, 1) UILine.BackgroundColor3 = Color3.fromRGB(35, 40, 55) UILine.BorderSizePixel = 0
+local Title = Instance.new("TextLabel", Main) Title.Size = UDim2.new(1, 0, 0, 32) Title.Text = "  josserpopsier hub v4" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.Font = Enum.Font.GothamBold Title.TextXAlignment = Enum.TextXAlignment.Left Title.BackgroundTransparency = 1
+local UILine = Instance.new("Frame", Main) UILine.Size = UDim2.new(0, 220, 0, 1) UILine.BackgroundColor3 = Color3.fromRGB(30, 35, 50) UILine.BorderSizePixel = 0
 
--- NEON TOGGLE CORNER BUTTON
-local Tog = Instance.new("TextButton", UI) Tog.Size = UDim2.new(0, 90, 0, 28) Tog.Position = UDim2.new(1, -105, 0, 15) Tog.Text, Tog.TextColor3, Tog.Font, Tog.TextSize, Tog.BackgroundColor3, Tog.Visible = "HIDE HUB", Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold, 11, Color3.fromRGB(20, 22, 33), false
-local TogCorner = Instance.new("UICorner", Tog) TogCorner.CornerRadius = UDim.new(0, 6)
-local TogStroke = Instance.new("UIStroke", Tog) TogStroke.Color = Color3.fromRGB(0, 170, 255) TogStroke.Thickness = 1.2
+local Tog = Instance.new("TextButton", UI) Tog.Size = UDim2.new(0, 85, 0, 26) Tog.Position = UDim2.new(1, -100, 0, 15) Tog.Text, Tog.TextColor3, Tog.Font, Tog.TextSize, Tog.BackgroundColor3, Tog.Visible = "HIDE HUB", Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold, 10, Color3.fromRGB(15, 16, 24), false
+local TogCorner = Instance.new("UICorner", Tog) TogCorner.CornerRadius = UDim.new(0, 5)
+local TogStroke = Instance.new("UIStroke", Tog) TogStroke.Color = Color3.fromRGB(0, 170, 255) TogStroke.Thickness = 1.0
 Tog.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible Tog.Text = Main.Visible and "HIDE HUB" or "SHOW HUB" end)
 
 local function MakeBtn(txt, cb)
-    local Card = Instance.new("Frame", Main) Card.Size = UDim2.new(1, -20, 0, 38) Card.BackgroundColor3 = Color3.fromRGB(18, 20, 28) Card.BorderSizePixel = 0
-    local CardCorner = Instance.new("UICorner", Card) CardCorner.CornerRadius = UDim.new(0, 6)
-    local Lbl = Instance.new("TextLabel", Card) Lbl.Size = UDim2.new(1, -80, 1, 0) Lbl.Position = UDim2.new(0, 10, 0, 0) Lbl.Text = txt Lbl.TextColor3 = Color3.fromRGB(180, 190, 210) Lbl.TextSize = 12 Lbl.Font = Enum.Font.GothamMedium Lbl.TextXAlignment = Enum.TextXAlignment.Left Lbl.BackgroundTransparency = 1
-    local B = Instance.new("TextButton", Card) B.Size = UDim2.new(0, 65, 0, 26) B.Position = UDim2.new(1, -72, 0, 6) B.Text = "OFF" B.Font = Enum.Font.GothamBold B.TextSize = 11 B.BackgroundColor3 = Color3.fromRGB(30, 32, 45) B.TextColor3 = Color3.fromRGB(150, 150, 150)
+    local Card = Instance.new("Frame", Main) Card.Size = UDim2.new(1, -20, 0, 36) Card.BackgroundColor3 = Color3.fromRGB(16, 18, 26) Card.BorderSizePixel = 0
+    local CardCorner = Instance.new("UICorner", Card) CardCorner.CornerRadius = UDim.new(0, 5)
+    local Lbl = Instance.new("TextLabel", Card) Lbl.Size = UDim2.new(1, -75, 1, 0) Lbl.Position = UDim2.new(0, 10, 0, 0) Lbl.Text = txt Lbl.TextColor3 = Color3.fromRGB(170, 180, 200) Lbl.TextSize = 11 Lbl.Font = Enum.Font.GothamMedium Lbl.TextXAlignment = Enum.TextXAlignment.Left Lbl.BackgroundTransparency = 1
+    local B = Instance.new("TextButton", Card) B.Size = UDim2.new(0, 60, 0, 24) B.Position = UDim2.new(1, -68, 0, 6) B.Text = "OFF" B.Font = Enum.Font.GothamBold B.TextSize = 10 B.BackgroundColor3 = Color3.fromRGB(28, 30, 42) B.TextColor3 = Color3.fromRGB(140, 140, 140)
     local BC = Instance.new("UICorner", B) BC.CornerRadius = UDim.new(0, 4)
-    local state = false B.MouseButton1Click:Connect(function() state = not state B.Text = state and "ON" or "OFF" B.BackgroundColor3 = state and Color3.fromRGB(0, 140, 255) or Color3.fromRGB(30, 32, 45) B.TextColor3 = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150) cb(state) end)
+    local state = false B.MouseButton1Click:Connect(function() state = not state B.Text = state and "ON" or "OFF" B.BackgroundColor3 = state and Color3.fromRGB(0, 140, 255) or Color3.fromRGB(28, 30, 42) B.TextColor3 = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 140) cb(state) end)
 end
 
 MakeBtn("Auto Shiftlock", function(v) Enabled = v if not v then sl = false targetDir = nil end end)
 MakeBtn("Auto Set Ball", function(v) AutoSet = v end)
 
--- CLIENT-SIDE ESP BOUNDARY MARKER SETUP
-local BallMarker = Instance.new("BoxHandleAdornment") BallMarker.Size = Vector3.new(2, 2, 2) BallMarker.Color3 = Color3.fromRGB(0, 255, 120) BallMarker.AlwaysOnTop = true BallMarker.ZIndex = 5 BallMarker.Transparency = 0.4 BallMarker.Adornee = nil BallMarker.Parent = workspace
+-- FLOOR LANDING ESP RING COMPONENT
+local FloorMarker = Instance.new("CylinderHandleAdornment") FloorMarker.Height = 0.2 FloorMarker.Radius = 3.5 FloorMarker.AlwaysOnTop = true FloorMarker.ZIndex = 4 FloorMarker.Transparency = 0.3 FloorMarker.Adornee = workspace.Terrain FloorMarker.Parent = workspace
 
--- HIGH-END TIMELINE INTRO SEQUENCE
+-- HIGH-END INTRO TIMELINE WITH ANIMATED FILL LOADING BAR
 task.spawn(function()
-    local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 250, 0, 120) Intro.Position = UDim2.new(0.5, -125, 0.4, -60) Intro.BackgroundColor3 = Color3.fromRGB(11, 12, 18)
-    local IC = Instance.new("UICorner", Intro) IC.CornerRadius = UDim.new(0, 12)
+    local Intro = Instance.new("Frame", UI) Intro.Size = UDim2.new(0, 240, 0, 120) Intro.Position = UDim2.new(0.5, -120, 0.4, -60) Intro.BackgroundColor3 = Color3.fromRGB(10, 11, 16)
+    local IC = Instance.new("UICorner", Intro) IC.CornerRadius = UDim.new(0, 10)
     local IS = Instance.new("UIStroke", Intro) IS.Color = Color3.fromRGB(0, 170, 255) IS.Thickness = 1.5
-    local Lbl = Instance.new("TextLabel", Intro) Lbl.Size = UDim2.new(1, 0, 1, 0) Lbl.Text = "script made by jossepopsi" Lbl.TextColor3 = Color3.fromRGB(255, 255, 255) Lbl.TextSize = 14 Lbl.Font = Enum.Font.GothamBold Lbl.BackgroundTransparency = 1
-    task.wait(4.0) Intro:Destroy() Main.Visible, Tog.Visible = true, true
+    local Lbl = Instance.new("TextLabel", Intro) Lbl.Size = UDim2.new(1, 0, 0, 40) Lbl.Position = UDim2.new(0, 0, 0, 25) Lbl.Text = "script made by jossepopsi" Lbl.TextColor3 = Color3.fromRGB(255, 255, 255) Lbl.TextSize = 13 Lbl.Font = Enum.Font.GothamBold Lbl.BackgroundTransparency = 1
+    
+    local B_Bg = Instance.new("Frame", Intro) B_Bg.Size = UDim2.new(0, 160, 0, 4) B_Bg.Position = UDim2.new(0.5, -80, 0, 80) B_Bg.BackgroundColor3 = Color3.fromRGB(30, 32, 45) B_Bg.BorderSizePixel = 0
+    local B_Fill = Instance.new("Frame", B_Bg) B_Fill.Size = UDim2.new(0, 0, 1, 0) B_Fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255) B_Fill.BorderSizePixel = 0
+    
+    T:Create(B_Fill, TweenInfo.new(4.0, Enum.EasingStyle.Sine), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+    task.wait(4.3) Intro:Destroy() Main.Visible, Tog.Visible = true, true
 end)
 
--- INTENSITY PREDICTOR & ENGINE LOOPS
+-- PRECISE ACCURATE PHYSICAL FLOOR ESTIMATOR ENGINE
 task.spawn(function()
-    while task.wait(0.02) do
+    while task.wait(0.01) do
         local ball = workspace:FindFirstChild("Ball") or workspace:FindFirstChild("Volleyball") or workspace:FindFirstChildOfClass("Part")
         if ball and ball:IsA("BasePart") and ball.Name:lower():match("ball") then
-            -- Predict Landing Coordinates via Physics Vectors
             local pos, vel = ball.Position, ball.AssemblyLinearVelocity
-            local t = (vel.Y > 0 or vel.Y < 0) and (pos.Y / math.abs(vel.Y)) or 0
-            local predictedLand = pos + Vector3.new(vel.X * t, -pos.Y, vel.Z * t)
+            local g = workspace.Gravity
             
-            -- Volleyball Legends Bounding Court Limits (Approximated Field Area)
-            local isBallGoingOut = (math.abs(predictedLand.X) > 65 or math.abs(predictedLand.Z) > 65)
+            -- High-accuracy projectile quad math calculation for the floor spot
+            local dY = pos.Y - 0.2
+            local disc = (vel.Y * vel.Y) + (2 * g * dY)
+            local t = 0
+            if disc >= 0 then t = (vel.Y + math.sqrt(disc)) / g end
             
-            if AutoSet and not isBallGoingOut then
-                BallMarker.Adornee = ball BallMarker.Color3 = Color3.fromRGB(0, 255, 120) -- Green inside limits
-                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                if root and (root.Position - pos).Magnitude < 12 then
-                    -- Forces an absolute Set Input (Simulates standard high ceiling set keys)
-                    local VIM = game:GetService("VirtualInputManager")
-                    VIM:SendKeyEvent(true, Enum.KeyCode.F, false, game) task.wait(0.05)
-                    VIM:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                    task.wait(0.6)
-                end
-            elseif isBallGoingOut then
-                BallMarker.Adornee = ball BallMarker.Color3 = Color3.fromRGB(255, 40, 40) -- Neon Red Out of Bounds Alert
+            local landPos = pos + Vector3.new(vel.X * t, 0, vel.Z * t)
+            local hitFloorPos = Vector3.new(landPos.X, 0.2, landPos.Z)
+            FloorMarker.CFrame = CFrame.new(hitFloorPos) * CFrame.Angles(math.pi/2, 0, 0)
+            
+            -- Map limits check to flag if the projectile falls out-of-bounds
+            local isBallGoingOut = (math.abs(hitFloorPos.X) > 65 or math.abs(hitFloorPos.Z) > 65)
+            
+            if isBallGoingOut then
+                FloorMarker.Color3 = Color3.fromRGB(255, 40, 40) -- Neon Red Alert
             else
-                BallMarker.Adornee = nil
+                FloorMarker.Color3 = Color3.fromRGB(0, 255, 120) -- Cyber Green Safe
+                local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if AutoSet and root and (root.Position - pos).Magnitude < 11 then
+                    -- Fires the true native setting keybind directly into the core game framework
+                    local VIM = game:GetService("VirtualInputManager")
+                    VIM:SendKeyEvent(true, Enum.KeyCode.Q, false, game) task.wait(0.05)
+                    VIM:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                    task.wait(0.5)
+                end
             end
         else
-            BallMarker.Adornee = nil
+            FloorMarker.CFrame = CFrame.new(0, -100, 0)
         end
     end
 end)
