@@ -3,16 +3,14 @@ local LP, C = P.LocalPlayer, workspace.CurrentCamera
 local PG = LP:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
-local SL, JP, TD, JT = false, false, nil, nil
+local SL, JP, TD, JT, AudioCue, ActiveBall = false, false, nil, nil, false, nil
 local UI = Instance.new("ScreenGui", PG) UI.Name = "JHubV6" UI.ResetOnSpawn = false
 
--- STYLISH DARK GLASS CHASSIS (NO CORNY SCI-FI MATRIX STUFF)
-local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 95) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
+local M = Instance.new("Frame", UI) M.Size = UDim2.new(0, 220, 0, 140) M.Position = UDim2.new(0.05, 0, 0.35, 0) M.BackgroundColor3 = Color3.fromRGB(10, 10, 12) M.BackgroundTransparency = 0.15 M.Active, M.Draggable, M.Visible = true, true, false
 Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S = Instance.new("UIStroke", M) S.Color, S.Thickness = Color3.fromRGB(235, 35, 75), 1.2
 local L = Instance.new("UIListLayout", M) L.Padding, L.HorizontalAlignment, L.VerticalAlignment = UDim.new(0, 10), Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- TOTAL EDGE LOCK MECHANISM
 local function ClampToScreen()
     local vs = C.ViewportSize
     local px = math.clamp(M.AbsolutePosition.X, 12, vs.X - M.AbsoluteSize.X - 12)
@@ -22,14 +20,11 @@ end
 M:GetPropertyChangedSignal("Position"):Connect(ClampToScreen)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToScreen)
 
--- HIDDEN RECOVERY INVISIBLE PANIC PANEL (TAP TOP CENTER TO RESET POSITION)
 local Rec = Instance.new("TextButton", UI) Rec.Size = UDim2.new(0.2, 0, 0, 25) Rec.Position = UDim2.new(0.4, 0, 0, 0) Rec.BackgroundTransparency, Rec.Text = 1, ""
 Rec.MouseButton1Click:Connect(function() M.Position = UDim2.new(0.05, 0, 0.35, 0) end)
 
--- HIGH-END COMPACT TITLEBAR
 local Tl = Instance.new("TextLabel", M) Tl.Size = UDim2.new(1, -20, 0, 16) Tl.Text = "JOSSERPOPSIER // V6" Tl.TextColor3 = Color3.fromRGB(255, 255, 255) Tl.TextSize, Tl.Font, Tl.TextXAlignment, Tl.BackgroundTransparency = 11, Enum.Font.GothamBold, Enum.TextXAlignment.Left, 1
 
--- DECREASED OVERLAY BUTTON SIZE FOR PREMIUM COMPACTNESS
 local Tg = Instance.new("TextButton", UI) Tg.Size = UDim2.new(0, 65, 0, 24) Tg.Position = UDim2.new(1, -85, 0, 45) Tg.Text, Tg.TextColor3, Tg.Font, Tg.TextSize, Tg.BackgroundColor3, Tg.Visible = "HIDE", Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 9, Color3.fromRGB(15, 15, 18), false
 Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 5)
 local TS = Instance.new("UIStroke", Tg) TS.Color, TS.Thickness = Color3.fromRGB(235, 35, 75), 1
@@ -53,8 +48,52 @@ local function MB(txt, cb)
 end
 
 MB("Auto Shiftlock", function(v) SL = v if not v then JP, TD = false, nil end end)
+MB("Hit Timing Audio", function(v) AudioCue = v end)
 
--- STEALTH SPLASH INITIALIZER
+local function FindBall(dir)
+    for _, item in ipairs(dir:GetChildren()) do
+        if item:IsA("BasePart") and item.Name:lower():match("ball") then return item end
+        local sub = FindBall(item) if sub then return sub end
+    end
+    return nil
+end
+
+local function GetBall()
+    if ActiveBall and ActiveBall.Parent then return ActiveBall end
+    ActiveBall = FindBall(workspace)
+    return ActiveBall
+end
+
+-- ENCHO ADAPTIVE HIT-TIMING NOTIFICATION SERVICE
+task.spawn(function()
+    local LastSoundTime = 0
+    while task.wait(0.01) do
+        if AudioCue then
+            local ball = GetBall()
+            local char = LP.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if ball and root then
+                local distance = (root.Position - ball.Position).Magnitude
+                local velocityY = ball.AssemblyLinearVelocity.Y
+                
+                -- ADAPTIVE HITBOX CONFIGURATION (EXPA_NDS TARGET RANGE VALUE MID-AIR FOR ENCHO STRETCH)
+                local currentHitboxRange = JP and 17.5 or 12.0
+                
+                if distance < currentHitboxRange and velocityY < 2 and (tick() - LastSoundTime > 0.5) then
+                    LastSoundTime = tick()
+                    local Sound = Instance.new("Sound", workspace)
+                    Sound.SoundId = "rbxassetid://4594191456" 
+                    Sound.Volume = 2
+                    Sound:Play()
+                    game:GetService("Debris"):AddItem(Sound, 1)
+                end
+            end
+        end
+    end
+end)
+
+-- STEALTH INITIALIZER LOOP
 task.spawn(function()
     local It = Instance.new("Frame", UI) It.Size, It.Position, It.BackgroundColor3 = UDim2.new(0, 160, 0, 30), UDim2.new(0.5, -80, 0.45, -15), Color3.fromRGB(10, 10, 12)
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
