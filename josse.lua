@@ -77,14 +77,16 @@ task.spawn(function()
                 local distance = (root.Position - ball.Position).Magnitude
                 local velocityY = ball.AssemblyLinearVelocity.Y
                 
-                -- ADAPTIVE HITBOX CONFIGURATION (EXPA_NDS TARGET RANGE VALUE MID-AIR FOR ENCHO STRETCH)
+                -- Dynamic hitbox calculation for Encho Stretch
                 local currentHitboxRange = JP and 17.5 or 12.0
                 
                 if distance < currentHitboxRange and velocityY < 2 and (tick() - LastSoundTime > 0.5) then
                     LastSoundTime = tick()
+                    
+                    -- FIXED: Uses a guaranteed Roblox system sound asset
                     local Sound = Instance.new("Sound", workspace)
-                    Sound.SoundId = "rbxassetid://4594191456" 
-                    Sound.Volume = 2
+                    Sound.SoundId = "rbxasset://sounds/action_button_press.mp3" 
+                    Sound.Volume = 3
                     Sound:Play()
                     game:GetService("Debris"):AddItem(Sound, 1)
                 end
