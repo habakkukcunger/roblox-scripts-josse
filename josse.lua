@@ -30,20 +30,17 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
--- REALISTIC DARK LIGHTING & TOTAL SMOOTH PLASTIC SYSTEM
+-- TOTAL MESH & TEXTURE INJECTION OVERRIDE SYSTEM
 game:GetService("RunService").RenderStepped:Connect(function()
     if not Opt then return end
     pcall(function()
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
         local lighting = game:GetService("Lighting")
-        
-        -- FORCES HIGH-CONTRAST COMPETITIVE DARK SHADOW MAP
         lighting.GlobalShadows = true
         lighting.Ambient = Color3.fromRGB(10, 10, 10)
         lighting.OutdoorAmbient = Color3.fromRGB(10, 10, 10)
         lighting.Brightness = 0.2
-        lighting.EnvironmentDiffuseScale = 0
-        lighting.EnvironmentSpecularScale = 0
+        lighting.EnvironmentDiffuseScale, lighting.EnvironmentSpecularScale = 0, 0
         
         for _,g in ipairs(lighting:GetChildren()) do 
             if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") or g:IsA("Sky") then g.Enabled = false end 
@@ -51,15 +48,16 @@ game:GetService("RunService").RenderStepped:Connect(function()
         
         for _,v in ipairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                v.Material = Enum.Material.SmoothPlastic
-                v.MaterialVariant = ""
+                v.Material, v.MaterialVariant = Enum.Material.SmoothPlastic, ""
                 if v:IsA("MeshPart") or v:IsA("UnionOperation") then
-                    v.RenderFidelity = Enum.RenderFidelity.Performance
-                    v.LevelOfDetail = Enum.LevelOfDetail.Low
-                    pcall(function() v.TextureID = "" end) -- Nukes embedded court designs
+                    v.RenderFidelity, v.LevelOfDetail = Enum.RenderFidelity.Performance, Enum.LevelOfDetail.Low
+                    pcall(function() v.TextureID = "rbxassetid://0" end)
+                    pcall(function() v.MeshId = "rbxassetid://1234567" end) -- Replaces custom geometry blocks directly
                 end
+            elseif v:IsA("SpecialMesh") then
+                pcall(function() v.TextureId = "rbxassetid://0" end)
             elseif v:IsA("SurfaceAppearance") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
-                v:Destroy() -- Strips custom court decals instantly
+                v:Destroy()
             elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
                 if not v:IsDescendantOf(LP.Character) then v:Destroy() end
             elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then
