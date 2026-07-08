@@ -31,24 +31,26 @@ end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 local function OptFn()
     pcall(function()
-        local l=game:GetService("Lighting") l.GlobalShadows,l.FogEnd=false,9e9
-        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
+        local lighting=game:GetService("Lighting")
+        lighting.GlobalShadows=false
+        for _,g in ipairs(lighting:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled=false end end
     end)
     pcall(function()
         settings().Rendering.QualityLevel=Enum.QualityLevel.Level01
         for _,v in ipairs(workspace:GetDescendants()) do
-            local name = v.Name:lower()
             if v:IsA("BasePart") then
-                v.CastShadow,v.Material,v.MaterialVariant=false,Enum.Material.SmoothPlastic,""
-                if v:IsA("MeshPart") or v:IsA("UnionOperation") then v.RenderFidelity,v.LevelOfDetail=Enum.RenderFidelity.Performance,Enum.LevelOfDetail.Low end
-                if name:match("stand") or name:match("chair") or name:match("prop") or name:match("tree") or name:match("plant") or name:match("crowd") or name:match("fan") or name:match("lobby") or name:match("bench") or name:match("light") or name:match("screen") or name:match("board") then
-                    if not name:match("court") and not name:match("net") and not name:match("line") and not name:match("floor") and not v:IsDescendantOf(LP.Character) then
-                        v.Transparency=1 v.CanCollide=false
-                    end
+                v.CastShadow=false
+                v.Material=Enum.Material.SmoothPlastic
+                v.MaterialVariant=""
+                if v:IsA("MeshPart") or v:IsA("UnionOperation") then
+                    v.RenderFidelity=Enum.RenderFidelity.Performance
+                    v.LevelOfDetail=Enum.LevelOfDetail.Low
                 end
-            elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Decal") or v:IsA("Texture") or v:IsA("Trail") then v:Destroy()
-            elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then if not v:IsDescendantOf(LP.Character) then v:Destroy() end
-            elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then if not v:IsDescendantOf(LP) then v.Enabled=false end end
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
+                v:Destroy()
+            elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
+                v:Destroy()
+            end
         end
     end)
 end
