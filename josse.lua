@@ -83,20 +83,24 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end end)
+
 task.spawn(function()
-    local It=Instance.new("Frame",UI)It.Size,It.Position,It.BackgroundColor3=UDim2.new(0,160,0,30),UDim2.new(0.5,-80,0.45,-15),Color3.fromRGB(10,10,12)
+    local It=Instance.new("Frame",UI)It.Size,It.Position,It.BackgroundColor3=UDim2.new(0,180,0,35),UDim2.new(0.5,-90,0.45,-17),Color3.fromRGB(12,12,15)
     Instance.new("UICorner",It).CornerRadius=UDim.new(0,6)
-    local IS=Instance.new("UIStroke",It)IS.Color,IS.Thickness=Color3.fromRGB(235,35,75),1.2
-    local BB=Instance.new("Frame",It)BB.Size,BB.Position,BB.BackgroundColor3,BB.BorderSizePixel=UDim2.new(1,-24,0,3),UDim2.new(0,12,0.5,-1),Color3.fromRGB(24,24,30),0
+    local IS=Instance.new("UIStroke",It)IS.Color,IS.Thickness,IS.ApplyStrokeMode=Color3.fromRGB(235,35,75),1.2,Enum.ApplyStrokeMode.Border
+    local Lb=Instance.new("TextLabel",It)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.BackgroundTransparency=UDim2.new(1,0,0,14),UDim2.new(0,0,0,5),"INITIALIZING...",Color3.fromRGB(150,150,155),8,Enum.Font.GothamBold,1
+    local BB=Instance.new("Frame",It)BB.Size,BB.Position,BB.BackgroundColor3,BB.BorderSizePixel=UDim2.new(1,-24,0,2),UDim2.new(0,12,1,-10),Color3.fromRGB(24,24,30),0
     Instance.new("UICorner",BB).CornerRadius=UDim.new(1,0)
-    local BF=Instance.new("Frame",BB)BF.Size,BB.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
+    local BF=Instance.new("Frame",BB)BF.Size,BF.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
     Instance.new("UICorner",BF).CornerRadius=UDim.new(1,0)
+    local G=Instance.new("UIGradient",BF)G.Color=ColorSequence.new(Color3.fromRGB(235,35,75),Color3.fromRGB(255,80,120))
     T:Create(BF,TweenInfo.new(1.8,Enum.EasingStyle.Cubic,Enum.EasingDirection.Out),{Size=UDim2.new(1,0,1,0)}):Play()
     task.wait(2.0)
     local o=TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.In)
-    T:Create(It,o,{BackgroundTransparency=1}):Play()T:Create(IS,o,{Transparency=1}):Play()T:Create(BB,o,{BackgroundTransparency=1}):Play()T:Create(BF,o,{BackgroundTransparency=1}):Play()
+    T:Create(It,o,{BackgroundTransparency=1}):Play()T:Create(IS,o,{Transparency=1}):Play()T:Create(BB,o,{BackgroundTransparency=1}):Play()T:Create(BF,o,{BackgroundTransparency=1}):Play()T:Create(Lb,o,{TextTransparency=1}):Play()
     task.wait(0.25)It:Destroy()M.Visible,Tg.Visible=true,true Clamp()
 end)
+
 local function SU(ch)
     local hm=ch:WaitForChild("Humanoid")
     hm.Jumping:Connect(function() if not SL then return end if JT then task.cancel(JT) end local l=C.CFrame.LookVector TD,JP=Vector3.new(l.X,0,l.Z).Unit,true JT=task.spawn(function() task.wait(0.4) JP,TD=false,nil end) end)
