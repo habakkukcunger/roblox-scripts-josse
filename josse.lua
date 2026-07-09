@@ -31,7 +31,7 @@ end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
-MB("Player Face Lines",function(v) FaceESP=v if not v then CE() end end)
+MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
 
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 game:GetService("RunService").RenderStepped:Connect(function()
