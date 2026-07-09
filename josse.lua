@@ -10,7 +10,7 @@ local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),
 local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,10),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Center
 local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,12,vs.X-M.AbsoluteSize.X-12),0,math.clamp(M.AbsolutePosition.Y,35,vs.Y-M.AbsoluteSize.Y-35)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
-local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER // V6",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
+local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
 local Tg=Instance.new("TextButton",UI)Tg.Size,Tg.Position,Tg.Text,Tg.TextColor3,Tg.Font,Tg.TextSize,Tg.BackgroundColor3,Tg.Visible=UDim2.new(0,65,0,24),UDim2.new(1,-85,0,45),"HIDE",Color3.fromRGB(240,240,240),Enum.Font.GothamBold,9,Color3.fromRGB(15,15,18),false
 Instance.new("UICorner",Tg).CornerRadius=UDim.new(0,5)
 Instance.new("UIStroke",Tg).Color,Instance.new("UIStroke",Tg).Thickness=Color3.fromRGB(235,35,75),1
