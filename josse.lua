@@ -41,7 +41,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
             local h,r,d=p.Character.Head,p.Character:FindFirstChild("HumanoidRootPart") or p.Character.Head,ActiveBeams[p]
             if not d then
                 local a0,a1,b=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain),Instance.new("Beam",workspace.Terrain)
-                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.45,0.20,ColorSequence.new(Color3.fromRGB(0,255,120)),true,1.0,0.0,2
+                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.45,0.45,ColorSequence.new(Color3.fromRGB(0,255,120)),true,1.0,0.0,2
                 d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
             local l=r.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
