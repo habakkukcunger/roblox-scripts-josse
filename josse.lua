@@ -1,9 +1,9 @@
 local P,T,U=game:GetService("Players"),game:GetService("TweenService"),game:GetService("UserInputService")
 local LP,C,PG=P.LocalPlayer,workspace.CurrentCamera,P.LocalPlayer:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
-local SL,FaceESP,Opt,ActiveBeams,JT,JP,TD=false,false,false,{},nil,false,nil
+local SL,FaceESP,ActiveBeams,JT,JP,TD=false,false,{},nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,175),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,135),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
@@ -30,41 +30,8 @@ local function MB(txt,cb)
 end
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
-local function OptFn()
-    task.spawn(function()
-        local l = game:GetService("Lighting")
-        l.GlobalShadows, l.FogEnd = false, 9e9
-        for _,g in ipairs(l:GetChildren()) do if g:IsA("PostEffect") or g:IsA("Atmosphere") or g:IsA("Clouds") then g.Enabled = false end end
-        local d = workspace:GetDescendants()
-        for idx,v in ipairs(d) do
-            if idx%100==0 then task.wait() end
-            pcall(function()
-                if LP.Character and v:IsDescendantOf(LP.Character) then return end
-                local n = v.Name:lower()
-                local core = n:match("court") or n:match("net") or n:match("line") or n:match("floor") or n:match("ball")
-                if v:IsA("BasePart") then
-                    v.CastShadow = false
-                    if not core then v.Material = Enum.Material.SmoothPlastic end
-                    if n:match("stand") or n:match("chair") or n:match("prop") or n:match("tree") or n:match("plant") or n:match("crowd") or n:match("fan") or n:match("lobby") or n:match("bench") or n:match("light") or n:match("screen") or n:match("board") or n:match("stadium") then
-                        if not core then v.Transparency, v.CanCollide = 1, false end
-                    end
-                elseif v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Trail") then
-                    v.Enabled = false
-                elseif v:IsA("Decal") or v:IsA("Texture") then
-                    if not n:match("court") and not n:match("line") then v:Destroy() end
-                elseif v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Clothing") or v:IsA("ShirtGraphic") then
-                    v:Destroy()
-                elseif v:IsA("BillboardGui") or v:IsA("SurfaceGui") then
-                    v.Enabled = false
-                end
-            end)
-        end
-    end)
-end
-
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Player Face Lines",function(v) FaceESP=v if not v then CE() end end)
-MB("Map Cleaner",function(v) Opt=v if v then OptFn() end end)
 
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -91,7 +58,7 @@ task.spawn(function()
     local Lb=Instance.new("TextLabel",It)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.BackgroundTransparency=UDim2.new(1,0,0,14),UDim2.new(0,0,0,5),"INITIALIZING...",Color3.fromRGB(150,150,155),8,Enum.Font.GothamBold,1
     local BB=Instance.new("Frame",It)BB.Size,BB.Position,BB.BackgroundColor3,BB.BorderSizePixel=UDim2.new(1,-24,0,2),UDim2.new(0,12,1,-10),Color3.fromRGB(24,24,30),0
     Instance.new("UICorner",BB).CornerRadius=UDim.new(1,0)
-    local BF=Instance.new("Frame",BB)BF.Size,BF.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
+    local BF=Instance.new("Frame",BB)BF.Size,BB.BackgroundColor3,BF.BorderSizePixel=UDim2.new(0,0,1,0),Color3.fromRGB(235,35,75),0
     Instance.new("UICorner",BF).CornerRadius=UDim.new(1,0)
     local G=Instance.new("UIGradient",BF)G.Color=ColorSequence.new(Color3.fromRGB(235,35,75),Color3.fromRGB(255,80,120))
     T:Create(BF,TweenInfo.new(1.8,Enum.EasingStyle.Cubic,Enum.EasingDirection.Out),{Size=UDim2.new(1,0,1,0)}):Play()
