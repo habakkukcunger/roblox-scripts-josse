@@ -39,7 +39,7 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
-MB("Auto Lucky Style Spins",function(v) AutoLuckySpins=v end)  -- Renamed
+MB("Auto Lucky Style Spins",function(v) AutoLuckySpins=v end)
 
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
@@ -91,15 +91,15 @@ game:GetService("RunService").RenderStepped:Connect(function()
     if rt and hm and hm.Health>0 then U.MouseBehavior=Enum.MouseBehavior.LockCenter rt.CFrame=CFrame.new(rt.Position,rt.Position+TD) hm.CameraOffset=hm.CameraOffset:LinearInterpolate(Vector3.new(2.5,2,0),0.2) end
 end)
 
--- Auto Lucky Style Spins (Aggressive claim loop)
+-- Auto Lucky Style Spins
 task.spawn(function()
-    while task.wait(0.35) do
+    while task.wait(0.3) do
         if not AutoLuckySpins then continue end
         pcall(function()
-            local possibleArgs = {{}, {"Claim"}, {"ClaimAll"}, {"Ranked"}, {"Bronze"}, {"Bronze2"}, {"Season"}, {true}, {1}}
+            local argsList = {{}, {"ClaimAll"}, {"Ranked"}, {"Bronze2"}, {"LuckyStyle"}, {"Season"}}
             for _, remote in ipairs(game:GetDescendants()) do
                 if remote:IsA("RemoteEvent") and (remote.Name:lower():find("claim") or remote.Name:lower():find("reward") or remote.Name:lower():find("season") or remote.Name:lower():find("rank") or remote.Name:lower():find("lucky")) then
-                    for _, args in ipairs(possibleArgs) do
+                    for _, args in ipairs(argsList) do
                         remote:FireServer(unpack(args))
                         task.wait(0.02)
                     end
@@ -108,10 +108,10 @@ task.spawn(function()
 
             for _, gui in ipairs({PG, LP.PlayerGui}) do
                 for _, obj in ipairs(gui:GetDescendants()) do
-                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim") or obj.Name:lower():find("reward") or obj.Name:lower():find("lucky")) then
-                        for i=1,4 do
+                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim") or obj.Name:lower():find("lucky") or obj.Name:lower():find("reward")) then
+                        for i=1,5 do
                             obj:Fire("MouseButton1Click")
-                            task.wait(0.06)
+                            task.wait(0.05)
                         end
                     end
                 end
