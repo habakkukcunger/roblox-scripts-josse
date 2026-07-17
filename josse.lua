@@ -39,7 +39,7 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
-MB("Auto Claim Ranked Rewards (Spam)",function(v) AutoClaimRanked=v end)  -- NEW FEATURE
+MB("Auto Claim Ranked Rewards (Infinite Spam)",function(v) AutoClaimRanked=v end)
 
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
@@ -61,7 +61,6 @@ end)
 
 P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end end)
 
--- Loading animation
 task.spawn(function()
     local It=Instance.new("Frame",UI)It.Size,It.Position,It.BackgroundColor3=UDim2.new(0,180,0,35),UDim2.new(0.5,-90,0.45,-17),Color3.fromRGB(12,12,15)
     Instance.new("UICorner",It).CornerRadius=UDim.new(0,6)
@@ -92,30 +91,47 @@ game:GetService("RunService").RenderStepped:Connect(function()
     if rt and hm and hm.Health>0 then U.MouseBehavior=Enum.MouseBehavior.LockCenter rt.CFrame=CFrame.new(rt.Position,rt.Position+TD) hm.CameraOffset=hm.CameraOffset:LinearInterpolate(Vector3.new(2.5,2,0),0.2) end
 end)
 
--- ==================== AUTO RANKED REWARDS SPAM ====================
+-- ==================== INFINITE RANKED REWARDS SPAM ====================
 task.spawn(function()
-    while task.wait(0.8) do
+    while task.wait(0.5) do  -- Very fast loop
         if not AutoClaimRanked then continue end
+        
         pcall(function()
-            -- Try common remotes
-            for _, remote in ipairs(game.ReplicatedStorage:GetDescendants()) do
-                if remote:IsA("RemoteEvent") and (remote.Name:lower():find("claim") or remote.Name:lower():find("reward") or remote.Name:lower():find("season")) then
-                    remote:FireServer()
-                    remote:FireServer("ClaimAll")
-                    remote:FireServer("Ranked")
+            local claimed = false
+            
+            -- Fire every possible reward remote
+            for _, remote in ipairs(game:GetDescendants()) do
+                if remote:IsA("RemoteEvent") and remote.Name:lower():find("claim") or remote.Name:lower():find("reward") or remote.Name:lower():find("season") or remote.Name:lower():find("rank") then
+                    for i = 1, 5 do  -- Spam each remote multiple times
+                        remote:FireServer()
+                        remote:FireServer("ClaimAll", "Bronze2")
+                        remote:FireServer("Ranked", "Bronze")
+                        remote:FireServer(1)  -- Try numeric reward ID
+                        task.wait(0.05)
+                    end
+                    claimed = true
                 end
             end
-
-            -- GUI button spam
+            
+            -- Button spam
             for _, gui in ipairs({PG, LP.PlayerGui}) do
                 for _, obj in ipairs(gui:GetDescendants()) do
-                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim")) then
-                        for i=1,3 do
+                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim") or obj.Name:lower():find("reward")) then
+                        for i = 1, 5 do
                             obj:Fire("MouseButton1Click")
-                            task.wait(0.1)
+                            task.wait(0.08)
                         end
+                        claimed = true
                     end
                 end
+            end
+            
+            if claimed then
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "JHubV6",
+                    Text = "Attempting ranked reward claim...",
+                    Duration = 1
+                })
             end
         end)
     end
