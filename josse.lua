@@ -1,20 +1,26 @@
 local P,T,U=game:GetService("Players"),game:GetService("TweenService"),game:GetService("UserInputService")
 local LP,C,PG=P.LocalPlayer,workspace.CurrentCamera,P.LocalPlayer:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
-local SL,FaceESP,ActiveBeams,JT,JP,TD=false,false,{},nil,false,nil
+
+local SL,FaceESP,AutoClaimRanked,ActiveBeams,JT,JP,TD=false,false,false,{},nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,135),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,170),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
 local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,10),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Center
+
 local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,12,vs.X-M.AbsoluteSize.X-12),0,math.clamp(M.AbsolutePosition.Y,35,vs.Y-M.AbsoluteSize.Y-35)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
+
 local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
+
 local Tg=Instance.new("TextButton",UI)Tg.Size,Tg.Position,Tg.Text,Tg.TextColor3,Tg.Font,Tg.TextSize,Tg.BackgroundColor3,Tg.Visible=UDim2.new(0,65,0,24),UDim2.new(1,-85,0,45),"HIDE",Color3.fromRGB(240,240,240),Enum.Font.GothamBold,9,Color3.fromRGB(15,15,18),false
 Instance.new("UICorner",Tg).CornerRadius=UDim.new(0,5)
 Instance.new("UIStroke",Tg).Color,Instance.new("UIStroke",Tg).Thickness=Color3.fromRGB(235,35,75),1
 Tg.MouseButton1Click:Connect(function() M.Visible=not M.Visible Tg.Text=M.Visible and "HIDE" or "SHOW" end)
+
 local function MB(txt,cb)
     local Cd=Instance.new("Frame",M)Cd.Size,Cd.BackgroundColor3,Cd.BorderSizePixel=UDim2.new(1,-20,0,34),Color3.fromRGB(18,18,22),0
     Instance.new("UICorner",Cd).CornerRadius=UDim.new(0,5)
@@ -28,12 +34,15 @@ local function MB(txt,cb)
         cb(st)
     end)
 end
+
 local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
+MB("Auto Claim Ranked Rewards (Spam)",function(v) AutoClaimRanked=v end)  -- NEW FEATURE
 
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
+
 game:GetService("RunService").RenderStepped:Connect(function()
     if not FaceESP then return end
     for _,p in ipairs(P:GetPlayers()) do
@@ -49,8 +58,10 @@ game:GetService("RunService").RenderStepped:Connect(function()
         elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
     end
 end)
+
 P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end end)
 
+-- Loading animation
 task.spawn(function()
     local It=Instance.new("Frame",UI)It.Size,It.Position,It.BackgroundColor3=UDim2.new(0,180,0,35),UDim2.new(0.5,-90,0.45,-17),Color3.fromRGB(12,12,15)
     Instance.new("UICorner",It).CornerRadius=UDim.new(0,6)
@@ -74,8 +85,38 @@ local function SU(ch)
     hm.StateChanged:Connect(function(_,s) if s==Enum.HumanoidStateType.Landed then JP,TD=false,nil if JT then task.cancel(JT) end end end)
 end
 if LP.Character then SU(LP.Character) end LP.CharacterAdded:Connect(SU)
+
 game:GetService("RunService").RenderStepped:Connect(function()
     if not SL or not JP or not TD then return end
     local ch=LP.Character local rt,hm=ch and ch:FindFirstChild("HumanoidRootPart"),ch and ch:FindFirstChildOfClass("Humanoid")
     if rt and hm and hm.Health>0 then U.MouseBehavior=Enum.MouseBehavior.LockCenter rt.CFrame=CFrame.new(rt.Position,rt.Position+TD) hm.CameraOffset=hm.CameraOffset:LinearInterpolate(Vector3.new(2.5,2,0),0.2) end
+end)
+
+-- ==================== AUTO RANKED REWARDS SPAM ====================
+task.spawn(function()
+    while task.wait(0.8) do
+        if not AutoClaimRanked then continue end
+        pcall(function()
+            -- Try common remotes
+            for _, remote in ipairs(game.ReplicatedStorage:GetDescendants()) do
+                if remote:IsA("RemoteEvent") and (remote.Name:lower():find("claim") or remote.Name:lower():find("reward") or remote.Name:lower():find("season")) then
+                    remote:FireServer()
+                    remote:FireServer("ClaimAll")
+                    remote:FireServer("Ranked")
+                end
+            end
+
+            -- GUI button spam
+            for _, gui in ipairs({PG, LP.PlayerGui}) do
+                for _, obj in ipairs(gui:GetDescendants()) do
+                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim")) then
+                        for i=1,3 do
+                            obj:Fire("MouseButton1Click")
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+        end)
+    end
 end)
