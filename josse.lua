@@ -91,29 +91,25 @@ game:GetService("RunService").RenderStepped:Connect(function()
     if rt and hm and hm.Health>0 then U.MouseBehavior=Enum.MouseBehavior.LockCenter rt.CFrame=CFrame.new(rt.Position,rt.Position+TD) hm.CameraOffset=hm.CameraOffset:LinearInterpolate(Vector3.new(2.5,2,0),0.2) end
 end)
 
--- Auto Lucky Style Spins (from deobfuscated script)
+-- Auto Lucky Style Spins (Final Aggressive Version)
 task.spawn(function()
-    while task.wait(0.35) do
+    while task.wait(0.25) do
         if not AutoLuckySpins then continue end
         pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Auto Lucky Style Spins",
+                Text = "Attempting claim...",
+                Duration = 1
+            })
+
             for _, remote in ipairs(game:GetDescendants()) do
                 if remote:IsA("RemoteEvent") and (remote.Name:lower():find("claim") or remote.Name:lower():find("reward") or remote.Name:lower():find("season") or remote.Name:lower():find("rank") or remote.Name:lower():find("lucky") or remote.Name:lower():find("spin")) then
-                    remote:FireServer()
-                    remote:FireServer("ClaimAll")
-                    remote:FireServer("Bronze2")
-                    remote:FireServer("LuckyStyle")
-                    remote:FireServer("Lucky")
-                end
-            end
-
-            -- GUI button spam for claim buttons
-            for _, gui in ipairs({PG, LP.PlayerGui}) do
-                for _, obj in ipairs(gui:GetDescendants()) do
-                    if obj:IsA("TextButton") and (obj.Text:lower():find("claim") or obj.Name:lower():find("claim") or obj.Name:lower():find("lucky") or obj.Name:lower():find("reward")) then
-                        for i=1,4 do
-                            obj:Fire("MouseButton1Click")
-                            task.wait(0.05)
-                        end
+                    for i=1,6 do
+                        remote:FireServer()
+                        remote:FireServer("ClaimAll")
+                        remote:FireServer("LuckyStyle")
+                        remote:FireServer("Bronze2")
+                        task.wait(0.01)
                     end
                 end
             end
