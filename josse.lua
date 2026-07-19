@@ -2,10 +2,10 @@ local P,T,U=game:GetService("Players"),game:GetService("TweenService"),game:GetS
 local LP,C,PG=P.LocalPlayer,workspace.CurrentCamera,P.LocalPlayer:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
-local SL,FaceESP,ActiveBeams,ShowLanding,JT,JP,TD=false,false,{},false,nil,false,nil
+local SL,FaceESP,ActiveBeams,ShowLanding,AntiLag,JT,JP,TD=false,false,{},false,false,nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,170),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,200),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
@@ -41,6 +41,152 @@ MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
 MB("Ball Landing Predictor",function(v) ShowLanding=v end)
 
+-- Anti-Lag System
+local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true}
+local OriginalStates={}
+
+local function SaveOriginalState(obj)
+    if OriginalStates[obj] then return end
+    local state={}
+    if obj:IsA("BasePart") then
+        state.Material=obj.Material
+        state.Color=obj.Color
+        if obj:IsA("MeshPart") then
+            state.TextureID=obj.TextureID
+        end
+    elseif obj:IsA("Texture") or obj:IsA("Decal") then
+        state.Texture=obj.Texture
+        state.Transparency=obj.Transparency
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+        state.Enabled=obj.Enabled
+    elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+        state.Enabled=obj.Enabled
+        state.Brightness=obj.Brightness
+    end
+    if next(state) then OriginalStates[obj]=state end
+end
+
+local function ApplyAntiLag()
+    if not AntiLag then return end
+    for _,obj in ipairs(workspace:GetDescendants()) do
+        pcall(function()
+            if obj:IsA("BasePart") and not obj:IsA("Terrain") then
+                SaveOriginalState(obj)
+                if LagSettings.Textures then
+                    obj.Material=Enum.Material.SmoothPlastic
+                    if obj:IsA("MeshPart") then
+                        obj.TextureID=""
+                    end
+                end
+            elseif (obj:IsA("Texture") or obj:IsA("Decal")) and LagSettings.Textures then
+                SaveOriginalState(obj)
+                obj.Transparency=1
+            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail")) and LagSettings.Particles then
+                SaveOriginalState(obj)
+                obj.Enabled=false
+            elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
+                SaveOriginalState(obj)
+                obj.Enabled=false
+            end
+        end)
+    end
+    if LagSettings.LightingQuality then
+        local lighting=game:GetService("Lighting")
+        OriginalStates[lighting]=OriginalStates[lighting] or {}
+        if not OriginalStates[lighting].Technology then
+            OriginalStates[lighting].Technology=lighting.Technology
+        end
+        if not OriginalStates[lighting].GlobalShadows then
+            OriginalStates[lighting].GlobalShadows=lighting.GlobalShadows
+        end
+        lighting.Technology=Enum.Technology.Compatibility
+        lighting.GlobalShadows=false
+    end
+end
+
+local function RestoreOriginal()
+    for obj,state in pairs(OriginalStates) do
+        pcall(function()
+            if obj:IsA("BasePart") then
+                if state.Material then obj.Material=state.Material end
+                if state.Color then obj.Color=state.Color end
+                if obj:IsA("MeshPart") and state.TextureID~=nil then obj.TextureID=state.TextureID end
+            elseif obj:IsA("Texture") or obj:IsA("Decal") then
+                if state.Texture then obj.Texture=state.Texture end
+                if state.Transparency then obj.Transparency=state.Transparency end
+            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                if state.Enabled~=nil then obj.Enabled=state.Enabled end
+            elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+                if state.Enabled~=nil then obj.Enabled=state.Enabled end
+                if state.Brightness then obj.Brightness=state.Brightness end
+            end
+        end)
+    end
+    local lighting=game:GetService("Lighting")
+    if OriginalStates[lighting] then
+        if OriginalStates[lighting].Technology then lighting.Technology=OriginalStates[lighting].Technology end
+        if OriginalStates[lighting].GlobalShadows~=nil then lighting.GlobalShadows=OriginalStates[lighting].GlobalShadows end
+    end
+    OriginalStates={}
+end
+
+-- Anti-Lag Toggle with Settings
+local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,80),Color3.fromRGB(18,18,22),0
+Instance.new("UICorner",LagFrame).CornerRadius=UDim.new(0,5)
+local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,14),UDim2.new(0,0,0,2),"ANTI-LAG",Color3.fromRGB(235,35,75),9,Enum.Font.GothamBold,1
+
+local function LagToggle(name,setting,yPos)
+    local Lb=Instance.new("TextLabel",LagFrame)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.TextXAlignment,Lb.BackgroundTransparency=UDim2.new(0,80,0,14),UDim2.new(0,8,0,yPos),name,Color3.fromRGB(180,180,185),8,Enum.Font.GothamMedium,Enum.TextXAlignment.Left,1
+    local B=Instance.new("TextButton",LagFrame)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,28,0,14),UDim2.new(0,88,0,yPos),"ON",Enum.Font.GothamBold,7,Color3.fromRGB(235,35,75),Color3.fromRGB(255,255,255)
+    Instance.new("UICorner",B).CornerRadius=UDim.new(0,3)
+    B.MouseButton1Click:Connect(function()
+        LagSettings[setting]=not LagSettings[setting]
+        B.Text=LagSettings[setting] and "ON" or "OFF"
+        B.BackgroundColor3=LagSettings[setting] and Color3.fromRGB(235,35,75) or Color3.fromRGB(28,28,34)
+        B.TextColor3=LagSettings[setting] and Color3.fromRGB(255,255,255) or Color3.fromRGB(140,140,145)
+        if AntiLag then
+            RestoreOriginal()
+            ApplyAntiLag()
+        end
+    end)
+end
+
+LagToggle("Textures","Textures",18)
+LagToggle("Shadows","Shadows",34)
+LagToggle("Particles","Particles",50)
+LagToggle("Mesh","MeshDetail",66)
+
+MB("Anti Lag",function(v)
+    AntiLag=v
+    if v then
+        ApplyAntiLag()
+    else
+        RestoreOriginal()
+    end
+end)
+
+-- Auto-reapply when new objects spawn
+workspace.DescendantAdded:Connect(function(obj)
+    if not AntiLag then return end
+    task.wait(0.1)
+    pcall(function()
+        if obj:IsA("BasePart") and not obj:IsA("Terrain") and LagSettings.Textures then
+            SaveOriginalState(obj)
+            obj.Material=Enum.Material.SmoothPlastic
+            if obj:IsA("MeshPart") then obj.TextureID="" end
+        elseif (obj:IsA("Texture") or obj:IsA("Decal")) and LagSettings.Textures then
+            SaveOriginalState(obj)
+            obj.Transparency=1
+        elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail")) and LagSettings.Particles then
+            SaveOriginalState(obj)
+            obj.Enabled=false
+        elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
+            SaveOriginalState(obj)
+            obj.Enabled=false
+        end
+    end)
+end)
+
 -- Ball Landing Predictor
 local LandingRing=Instance.new("Part")LandingRing.Name="LandingRing"LandingRing.Size=Vector3.new(6,0.1,6)LandingRing.Anchored=true LandingRing.CanCollide=false LandingRing.Transparency=0.6
 LandingRing.Material=Enum.Material.Neon LandingRing.Color=Color3.fromRGB(255,80,120)
@@ -61,32 +207,30 @@ game:GetService("RunService").RenderStepped:Connect(function()
         LandingRing.Parent=nil
         return
     end
-    
+
     local ball=FindBall()
     if not ball then LandingRing.Parent=nil return end
-    
+
     LandingRing.Parent=workspace.Terrain
-    
+
     local vel=ball.Velocity
     local pos=ball.Position
     local gravity=workspace.Gravity
-    
-    -- Projectile motion to find landing time when Y = court height
-    -- Solve: pos.Y + vel.Y*t - 0.5*gravity*t^2 = 1 (approx court height)
+
     local a=-0.5*gravity
     local b=vel.Y
     local c=pos.Y-1
-    
+
     local discriminant=b*b-4*a*c
     if discriminant<0 then LandingRing.Parent=nil return end
-    
+
     local t=(-b+math.sqrt(discriminant))/(2*a)
     if t<0 then t=(-b-math.sqrt(discriminant))/(2*a) end
     if t<0 or t>5 then LandingRing.Parent=nil return end
-    
+
     local landX=pos.X+vel.X*t
     local landZ=pos.Z+vel.Z*t
-    
+
     LandingRing.CFrame=CFrame.new(landX,1.05,landZ)
     LandingRing.Size=Vector3.new(4+math.min(t*2,8),0.1,4+math.min(t*2,8))
 end)
