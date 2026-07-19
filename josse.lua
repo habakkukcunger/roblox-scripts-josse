@@ -269,7 +269,7 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP - STABLE: Attachments parented to character, offset via local Position
+-- Face ESP - STABLE v2: Use WorldPosition with horizontal facing lock, parent to terrain for clean updates
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -280,20 +280,18 @@ game:GetService("RunService").RenderStepped:Connect(function()
             if not torso then continue end
             local d=ActiveBeams[p]
             if not d then
-                -- Parent attachments directly to torso so they move with the character naturally
-                local a0,a1=Instance.new("Attachment",torso),Instance.new("Attachment",torso)
-                -- a0 at center, a1 offset forward by 55 studs in local space
-                a0.Position=Vector3.new(0,0,0)
-                a1.Position=Vector3.new(0,0,-55)
+                local a0,a1=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain)
                 local b=Instance.new("Beam",workspace.Terrain)
                 b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset,b.Transparency=a0,a1,0.35,0.35,ColorSequence.new(Color3.fromRGB(255,0,0)),true,0.3,0,2,NumberSequence.new(0)
-                d={Beam=b,A0=a0,A1=a1,Torso=torso}ActiveBeams[p]=d
+                d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
-            -- Only update if torso changed (new character, respawn, etc.)
-            if d.Torso~=torso then
-                pcall(function() d.Beam:Destroy() d.A0:Destroy() d.A1:Destroy() end)
-                ActiveBeams[p]=nil
-            end
+            -- Calculate horizontal facing direction (ignore vertical tilt)
+            local lv=torso.CFrame.LookVector
+            local f=Vector3.new(lv.X,0,lv.Z).Unit
+            if f.Magnitude<0.001 then f=Vector3.new(0,0,-1) end
+            -- Update positions every frame for accuracy
+            d.A0.WorldPosition=torso.Position+(f*0.6)
+            d.A1.WorldPosition=torso.Position+(f*55)
         elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
     end
 end)
