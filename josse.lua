@@ -2,10 +2,10 @@ local P,T,U=game:GetService("Players"),game:GetService("TweenService"),game:GetS
 local LP,C,PG=P.LocalPlayer,workspace.CurrentCamera,P.LocalPlayer:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
-local SL,FaceESP,ActiveBeams,JT,JP,TD=false,false,{},nil,false,nil
+local SL,FaceESP,ActiveBeams,ShowLanding,JT,JP,TD=false,false,{},false,nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,120),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,170),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
@@ -39,7 +39,59 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
+MB("Ball Landing Predictor",function(v) ShowLanding=v end)
 
+-- Ball Landing Predictor
+local LandingRing=Instance.new("Part")LandingRing.Name="LandingRing"LandingRing.Size=Vector3.new(6,0.1,6)LandingRing.Anchored=true LandingRing.CanCollide=false LandingRing.Transparency=0.6
+LandingRing.Material=Enum.Material.Neon LandingRing.Color=Color3.fromRGB(255,80,120)
+local LRMesh=Instance.new("CylinderMesh",LandingRing)
+local LRGlow=Instance.new("PointLight",LandingRing)LRGlow.Color=Color3.fromRGB(255,80,120)LRGlow.Brightness=2 LRGlow.Range=8
+
+local function FindBall()
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if o:IsA("BasePart") and (o.Name:lower():find("ball") or o.Name:lower():find("volley")) and o.Velocity.Magnitude>1 then
+            return o
+        end
+    end
+    return nil
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not ShowLanding then
+        LandingRing.Parent=nil
+        return
+    end
+    
+    local ball=FindBall()
+    if not ball then LandingRing.Parent=nil return end
+    
+    LandingRing.Parent=workspace.Terrain
+    
+    local vel=ball.Velocity
+    local pos=ball.Position
+    local gravity=workspace.Gravity
+    
+    -- Projectile motion to find landing time when Y = court height
+    -- Solve: pos.Y + vel.Y*t - 0.5*gravity*t^2 = 1 (approx court height)
+    local a=-0.5*gravity
+    local b=vel.Y
+    local c=pos.Y-1
+    
+    local discriminant=b*b-4*a*c
+    if discriminant<0 then LandingRing.Parent=nil return end
+    
+    local t=(-b+math.sqrt(discriminant))/(2*a)
+    if t<0 then t=(-b-math.sqrt(discriminant))/(2*a) end
+    if t<0 or t>5 then LandingRing.Parent=nil return end
+    
+    local landX=pos.X+vel.X*t
+    local landZ=pos.Z+vel.Z*t
+    
+    LandingRing.CFrame=CFrame.new(landX,1.05,landZ)
+    LandingRing.Size=Vector3.new(4+math.min(t*2,8),0.1,4+math.min(t*2,8))
+end)
+
+-- Face ESP
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -60,6 +112,7 @@ end)
 
 P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end end)
 
+-- Init screen
 task.spawn(function()
     local It=Instance.new("Frame",UI)It.Size,It.Position,It.BackgroundColor3=UDim2.new(0,180,0,35),UDim2.new(0.5,-90,0.45,-17),Color3.fromRGB(12,12,15)
     Instance.new("UICorner",It).CornerRadius=UDim.new(0,6)
@@ -77,6 +130,7 @@ task.spawn(function()
     task.wait(0.25)It:Destroy()M.Visible,Tg.Visible=true,true Clamp()
 end)
 
+-- Shiftlock
 local function SU(ch)
     local hm=ch:WaitForChild("Humanoid")
     hm.Jumping:Connect(function() if not SL then return end if JT then task.cancel(JT) end local l=C.CFrame.LookVector TD,JP=Vector3.new(l.X,0,l.Z).Unit,true JT=task.spawn(function() task.wait(0.4) JP,TD=false,nil end) end)
