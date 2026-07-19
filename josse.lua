@@ -11,7 +11,6 @@ Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
 local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,6),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Top
 
--- FIXED: Allow dragging closer to top of screen (5px margin instead of 35px)
 local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,5,vs.X-M.AbsoluteSize.X-5),0,math.clamp(M.AbsolutePosition.Y,5,vs.Y-M.AbsoluteSize.Y-5)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
@@ -270,7 +269,7 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP - BRIGHT RED and 45 STUDS
+-- Face ESP - FIXED: Thinner lines, more visible
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -280,7 +279,8 @@ game:GetService("RunService").RenderStepped:Connect(function()
             local h,r,d=p.Character.Head,p.Character:FindFirstChild("HumanoidRootPart") or p.Character.Head,ActiveBeams[p]
             if not d then
                 local a0,a1,b=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain),Instance.new("Beam",workspace.Terrain)
-                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.6,0.6,ColorSequence.new(Color3.fromRGB(255,50,50)),true,1.0,0.0,2
+                -- FIXED: Thinner width (0.3 instead of 0.6), lower light emission for visibility, solid bright red
+                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.3,0.3,ColorSequence.new(Color3.fromRGB(255,30,30)),true,0.5,0.0,2
                 d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
             local l=r.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
