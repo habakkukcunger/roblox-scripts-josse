@@ -11,7 +11,8 @@ Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
 local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,6),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Top
 
-local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,12,vs.X-M.AbsoluteSize.X-12),0,math.clamp(M.AbsolutePosition.Y,35,vs.Y-M.AbsoluteSize.Y-35)) end
+-- FIXED: Allow dragging closer to top of screen (5px margin instead of 35px)
+local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,5,vs.X-M.AbsoluteSize.X-5),0,math.clamp(M.AbsolutePosition.Y,5,vs.Y-M.AbsoluteSize.Y-5)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
 local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
