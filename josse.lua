@@ -35,7 +35,7 @@ local function MB(txt,cb)
     end)
 end
 
-local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() i.Glow:Destroy() end) end table.clear(ActiveBeams) end
+local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Destroy() i.A0:Destroy() i.A1:Destroy() end) end table.clear(ActiveBeams) end
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
@@ -269,34 +269,31 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP - FIXED: Much more visible with glow outline
+-- Face ESP - SINGLE beam from TORSO, 55 studs, bright red
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if not FaceESP then return end
     for _,p in ipairs(P:GetPlayers()) do
-        if p~=LP and not IT(p) and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 then
-            local h,r,d=p.Character.Head,p.Character:FindFirstChild("HumanoidRootPart") or p.Character.Head,ActiveBeams[p]
+        if p~=LP and not IT(p) and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 then
+            -- Use Torso (HumanoidRootPart) instead of Head
+            local torso=p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso")
+            if not torso then continue end
+            local d=ActiveBeams[p]
             if not d then
                 local a0,a1=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain)
-
-                -- Main beam - bright solid red
                 local b=Instance.new("Beam",workspace.Terrain)
-                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset,b.Transparency=a0,a1,0.25,0.25,ColorSequence.new(Color3.fromRGB(255,0,0)),true,0,0,2,NumberSequence.new(0)
-
-                -- Glow outline beam - thicker, semi-transparent red behind it
-                local glow=Instance.new("Beam",workspace.Terrain)
-                glow.Attachment0,glow.Attachment1,glow.Width0,glow.Width1,glow.Color,glow.FaceCamera,glow.LightEmission,glow.LightInfluence,glow.ZOffset,glow.Transparency=a0,a1,0.8,0.8,ColorSequence.new(Color3.fromRGB(255,50,50)),true,0.8,0,1,NumberSequence.new(0.7)
-
-                d={Beam=b,A0=a0,A1=a1,Glow=glow}ActiveBeams[p]=d
+                -- Single beam: bright red, medium width, no glow
+                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset,b.Transparency=a0,a1,0.35,0.35,ColorSequence.new(Color3.fromRGB(255,0,0)),true,0.3,0,2,NumberSequence.new(0)
+                d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
-            local l=r.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
-            d.A0.WorldPosition=h.Position+(f*0.6) d.A1.WorldPosition=h.Position+(f*45)
-        elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() ActiveBeams[p].Glow:Destroy() end) ActiveBeams[p]=nil end
+            local l=torso.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
+            d.A0.WorldPosition=torso.Position+(f*0.6) d.A1.WorldPosition=torso.Position+(f*55)
+        elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
     end
 end)
 
-P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() ActiveBeams[p].Glow:Destroy() end) ActiveBeams[p]=nil end end)
+P.PlayerRemoving:Connect(function(p) if ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end end)
 
 -- Init screen
 task.spawn(function()
