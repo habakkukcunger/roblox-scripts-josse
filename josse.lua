@@ -186,7 +186,7 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP
+-- Face ESP - RED and LONGER (60 studs instead of 30)
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -196,11 +196,11 @@ game:GetService("RunService").RenderStepped:Connect(function()
             local h,r,d=p.Character.Head,p.Character:FindFirstChild("HumanoidRootPart") or p.Character.Head,ActiveBeams[p]
             if not d then
                 local a0,a1,b=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain),Instance.new("Beam",workspace.Terrain)
-                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.45,0.45,ColorSequence.new(Color3.fromRGB(0,255,120)),true,1.0,0.0,2
+                b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset=a0,a1,0.45,0.45,ColorSequence.new(Color3.fromRGB(255,0,0)),true,1.0,0.0,2
                 d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
             local l=r.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
-            d.A0.WorldPosition=h.Position+(f*0.6) d.A1.WorldPosition=h.Position+(f*30)
+            d.A0.WorldPosition=h.Position+(f*0.6) d.A1.WorldPosition=h.Position+(f*60)
         elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
     end
 end)
