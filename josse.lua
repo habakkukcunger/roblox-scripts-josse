@@ -5,11 +5,11 @@ if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 local SL,FaceESP,ActiveBeams,AntiLag,JT,JP,TD=false,false,{},false,nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,200),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,280),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
-local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,10),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Center
+local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,6),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Top
 
 local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,12,vs.X-M.AbsoluteSize.X-12),0,math.clamp(M.AbsolutePosition.Y,35,vs.Y-M.AbsoluteSize.Y-35)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
@@ -22,10 +22,10 @@ Instance.new("UIStroke",Tg).Color,Instance.new("UIStroke",Tg).Thickness=Color3.f
 Tg.MouseButton1Click:Connect(function() M.Visible=not M.Visible Tg.Text=M.Visible and "HIDE" or "SHOW" end)
 
 local function MB(txt,cb)
-    local Cd=Instance.new("Frame",M)Cd.Size,Cd.BackgroundColor3,Cd.BorderSizePixel=UDim2.new(1,-20,0,34),Color3.fromRGB(18,18,22),0
+    local Cd=Instance.new("Frame",M)Cd.Size,Cd.BackgroundColor3,Cd.BorderSizePixel=UDim2.new(1,-20,0,30),Color3.fromRGB(18,18,22),0
     Instance.new("UICorner",Cd).CornerRadius=UDim.new(0,5)
     local Lb=Instance.new("TextLabel",Cd)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.TextXAlignment,Lb.BackgroundTransparency=UDim2.new(1,-75,1,0),UDim2.new(0,10,0,0),txt,Color3.fromRGB(210,210,215),11,Enum.Font.GothamMedium,Enum.TextXAlignment.Left,1
-    local B=Instance.new("TextButton",Cd)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,48,0,20),UDim2.new(1,-58,0,7),"OFF",Enum.Font.GothamBold,9,Color3.fromRGB(28,28,34),Color3.fromRGB(140,140,145)
+    local B=Instance.new("TextButton",Cd)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,48,0,18),UDim2.new(1,-58,0,6),"OFF",Enum.Font.GothamBold,9,Color3.fromRGB(28,28,34),Color3.fromRGB(140,140,145)
     Instance.new("UICorner",B).CornerRadius=UDim.new(0,4)
     local st=false B.MouseButton1Click:Connect(function()
         st=not st B.Text=st and "ON" or "OFF"
@@ -41,13 +41,12 @@ MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
 
 -- Anti-Lag System - EXPANDED
-local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true,RenderDistance=false}
+local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true}
 local OriginalStates={}
 local SavedSkybox=nil
 local SavedAtmosphere=nil
 local SavedReflection=nil
 local SavedPostProcessing=nil
-local RenderDistance=500
 
 local function SaveOriginalState(obj)
     if OriginalStates[obj] then return end
@@ -76,7 +75,6 @@ local function ApplyAntiLag()
     if not AntiLag then return end
     local lighting=game:GetService("Lighting")
 
-    -- Save and disable skybox
     if LagSettings.Skybox then
         if lighting:FindFirstChildOfClass("Sky") and not SavedSkybox then
             SavedSkybox=lighting:FindFirstChildOfClass("Sky"):Clone()
@@ -84,7 +82,6 @@ local function ApplyAntiLag()
         end
     end
 
-    -- Save and disable atmosphere
     if LagSettings.Atmosphere then
         if lighting:FindFirstChildOfClass("Atmosphere") and not SavedAtmosphere then
             SavedAtmosphere=lighting:FindFirstChildOfClass("Atmosphere"):Clone()
@@ -92,7 +89,6 @@ local function ApplyAntiLag()
         end
     end
 
-    -- Save and disable reflections
     if LagSettings.Reflections then
         if not SavedReflection then
             SavedReflection=lighting.EnvironmentDiffuseScale
@@ -101,7 +97,6 @@ local function ApplyAntiLag()
         lighting.EnvironmentSpecularScale=0
     end
 
-    -- Save and disable post-processing
     if LagSettings.PostProcessing then
         for _,effect in ipairs(lighting:GetChildren()) do
             if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
@@ -156,26 +151,22 @@ end
 local function RestoreOriginal()
     local lighting=game:GetService("Lighting")
 
-    -- Restore skybox
     if SavedSkybox then
         SavedSkybox.Parent=lighting
         SavedSkybox=nil
     end
 
-    -- Restore atmosphere
     if SavedAtmosphere then
         SavedAtmosphere.Parent=lighting
         SavedAtmosphere=nil
     end
 
-    -- Restore reflections
     if SavedReflection then
         lighting.EnvironmentDiffuseScale=SavedReflection
         lighting.EnvironmentSpecularScale=SavedReflection
         SavedReflection=nil
     end
 
-    -- Restore post-processing
     if SavedPostProcessing then
         for effect,enabled in pairs(SavedPostProcessing) do
             if effect and effect.Parent then
@@ -212,15 +203,15 @@ local function RestoreOriginal()
     OriginalStates={}
 end
 
--- Anti-Lag Toggle with Settings - EXPANDED
-local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,140),Color3.fromRGB(18,18,22),0
+-- Anti-Lag Toggle with Compact Settings
+local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,110),Color3.fromRGB(18,18,22),0
 Instance.new("UICorner",LagFrame).CornerRadius=UDim.new(0,5)
-local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,14),UDim2.new(0,0,0,2),"ANTI-LAG",Color3.fromRGB(235,35,75),9,Enum.Font.GothamBold,1
+local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"ANTI-LAG",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
 
-local function LagToggle(name,setting,yPos)
-    local Lb=Instance.new("TextLabel",LagFrame)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.TextXAlignment,Lb.BackgroundTransparency=UDim2.new(0,80,0,14),UDim2.new(0,8,0,yPos),name,Color3.fromRGB(180,180,185),8,Enum.Font.GothamMedium,Enum.TextXAlignment.Left,1
-    local B=Instance.new("TextButton",LagFrame)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,28,0,14),UDim2.new(0,88,0,yPos),"ON",Enum.Font.GothamBold,7,Color3.fromRGB(235,35,75),Color3.fromRGB(255,255,255)
-    Instance.new("UICorner",B).CornerRadius=UDim.new(0,3)
+local function LagToggle(name,setting,xPos,yPos)
+    local Lb=Instance.new("TextLabel",LagFrame)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.TextXAlignment,Lb.BackgroundTransparency=UDim2.new(0,70,0,12),UDim2.new(0,xPos,0,yPos),name,Color3.fromRGB(180,180,185),7,Enum.Font.GothamMedium,Enum.TextXAlignment.Left,1
+    local B=Instance.new("TextButton",LagFrame)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,24,0,12),UDim2.new(0,xPos+72,0,yPos),"ON",Enum.Font.GothamBold,6,Color3.fromRGB(235,35,75),Color3.fromRGB(255,255,255)
+    Instance.new("UICorner",B).CornerRadius=UDim.new(0,2)
     B.MouseButton1Click:Connect(function()
         LagSettings[setting]=not LagSettings[setting]
         B.Text=LagSettings[setting] and "ON" or "OFF"
@@ -233,15 +224,16 @@ local function LagToggle(name,setting,yPos)
     end)
 end
 
-LagToggle("Textures","Textures",18)
-LagToggle("Shadows","Shadows",34)
-LagToggle("Particles","Particles",50)
-LagToggle("Mesh","MeshDetail",66)
-LagToggle("Billboards","Billboards",82)
-LagToggle("Skybox","Skybox",98)
-LagToggle("Atmosphere","Atmosphere",114)
-LagToggle("Reflections","Reflections",130)
-LagToggle("PostFX","PostProcessing",146)
+-- Two column layout for compactness
+LagToggle("Textures","Textures",8,16)
+LagToggle("Shadows","Shadows",8,32)
+LagToggle("Particles","Particles",8,48)
+LagToggle("Mesh","MeshDetail",8,64)
+LagToggle("Billboards","Billboards",8,80)
+LagToggle("Skybox","Skybox",110,16)
+LagToggle("Atmosphere","Atmosphere",110,32)
+LagToggle("Reflections","Reflections",110,48)
+LagToggle("PostFX","PostProcessing",110,64)
 
 MB("Anti Lag",function(v)
     AntiLag=v
