@@ -40,9 +40,14 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
 
--- Anti-Lag System
-local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true}
+-- Anti-Lag System - EXPANDED
+local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true,RenderDistance=false}
 local OriginalStates={}
+local SavedSkybox=nil
+local SavedAtmosphere=nil
+local SavedReflection=nil
+local SavedPostProcessing=nil
+local RenderDistance=500
 
 local function SaveOriginalState(obj)
     if OriginalStates[obj] then return end
@@ -61,12 +66,54 @@ local function SaveOriginalState(obj)
     elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
         state.Enabled=obj.Enabled
         state.Brightness=obj.Brightness
+    elseif obj:IsA("BillboardGui") then
+        state.Enabled=obj.Enabled
     end
     if next(state) then OriginalStates[obj]=state end
 end
 
 local function ApplyAntiLag()
     if not AntiLag then return end
+    local lighting=game:GetService("Lighting")
+
+    -- Save and disable skybox
+    if LagSettings.Skybox then
+        if lighting:FindFirstChildOfClass("Sky") and not SavedSkybox then
+            SavedSkybox=lighting:FindFirstChildOfClass("Sky"):Clone()
+            lighting:FindFirstChildOfClass("Sky").Parent=nil
+        end
+    end
+
+    -- Save and disable atmosphere
+    if LagSettings.Atmosphere then
+        if lighting:FindFirstChildOfClass("Atmosphere") and not SavedAtmosphere then
+            SavedAtmosphere=lighting:FindFirstChildOfClass("Atmosphere"):Clone()
+            lighting:FindFirstChildOfClass("Atmosphere").Parent=nil
+        end
+    end
+
+    -- Save and disable reflections
+    if LagSettings.Reflections then
+        if not SavedReflection then
+            SavedReflection=lighting.EnvironmentDiffuseScale
+        end
+        lighting.EnvironmentDiffuseScale=0
+        lighting.EnvironmentSpecularScale=0
+    end
+
+    -- Save and disable post-processing
+    if LagSettings.PostProcessing then
+        for _,effect in ipairs(lighting:GetChildren()) do
+            if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
+                if not SavedPostProcessing then SavedPostProcessing={} end
+                if not SavedPostProcessing[effect] then
+                    SavedPostProcessing[effect]=effect.Enabled
+                end
+                effect.Enabled=false
+            end
+        end
+    end
+
     for _,obj in ipairs(workspace:GetDescendants()) do
         pcall(function()
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
@@ -86,11 +133,14 @@ local function ApplyAntiLag()
             elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
                 SaveOriginalState(obj)
                 obj.Enabled=false
+            elseif obj:IsA("BillboardGui") and LagSettings.Billboards then
+                SaveOriginalState(obj)
+                obj.Enabled=false
             end
         end)
     end
+
     if LagSettings.LightingQuality then
-        local lighting=game:GetService("Lighting")
         OriginalStates[lighting]=OriginalStates[lighting] or {}
         if not OriginalStates[lighting].Technology then
             OriginalStates[lighting].Technology=lighting.Technology
@@ -104,6 +154,37 @@ local function ApplyAntiLag()
 end
 
 local function RestoreOriginal()
+    local lighting=game:GetService("Lighting")
+
+    -- Restore skybox
+    if SavedSkybox then
+        SavedSkybox.Parent=lighting
+        SavedSkybox=nil
+    end
+
+    -- Restore atmosphere
+    if SavedAtmosphere then
+        SavedAtmosphere.Parent=lighting
+        SavedAtmosphere=nil
+    end
+
+    -- Restore reflections
+    if SavedReflection then
+        lighting.EnvironmentDiffuseScale=SavedReflection
+        lighting.EnvironmentSpecularScale=SavedReflection
+        SavedReflection=nil
+    end
+
+    -- Restore post-processing
+    if SavedPostProcessing then
+        for effect,enabled in pairs(SavedPostProcessing) do
+            if effect and effect.Parent then
+                effect.Enabled=enabled
+            end
+        end
+        SavedPostProcessing=nil
+    end
+
     for obj,state in pairs(OriginalStates) do
         pcall(function()
             if obj:IsA("BasePart") then
@@ -118,10 +199,12 @@ local function RestoreOriginal()
             elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
                 if state.Enabled~=nil then obj.Enabled=state.Enabled end
                 if state.Brightness then obj.Brightness=state.Brightness end
+            elseif obj:IsA("BillboardGui") then
+                if state.Enabled~=nil then obj.Enabled=state.Enabled end
             end
         end)
     end
-    local lighting=game:GetService("Lighting")
+
     if OriginalStates[lighting] then
         if OriginalStates[lighting].Technology then lighting.Technology=OriginalStates[lighting].Technology end
         if OriginalStates[lighting].GlobalShadows~=nil then lighting.GlobalShadows=OriginalStates[lighting].GlobalShadows end
@@ -129,8 +212,8 @@ local function RestoreOriginal()
     OriginalStates={}
 end
 
--- Anti-Lag Toggle with Settings
-local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,80),Color3.fromRGB(18,18,22),0
+-- Anti-Lag Toggle with Settings - EXPANDED
+local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,140),Color3.fromRGB(18,18,22),0
 Instance.new("UICorner",LagFrame).CornerRadius=UDim.new(0,5)
 local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,14),UDim2.new(0,0,0,2),"ANTI-LAG",Color3.fromRGB(235,35,75),9,Enum.Font.GothamBold,1
 
@@ -154,6 +237,11 @@ LagToggle("Textures","Textures",18)
 LagToggle("Shadows","Shadows",34)
 LagToggle("Particles","Particles",50)
 LagToggle("Mesh","MeshDetail",66)
+LagToggle("Billboards","Billboards",82)
+LagToggle("Skybox","Skybox",98)
+LagToggle("Atmosphere","Atmosphere",114)
+LagToggle("Reflections","Reflections",130)
+LagToggle("PostFX","PostProcessing",146)
 
 MB("Anti Lag",function(v)
     AntiLag=v
@@ -180,6 +268,9 @@ workspace.DescendantAdded:Connect(function(obj)
             SaveOriginalState(obj)
             obj.Enabled=false
         elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
+            SaveOriginalState(obj)
+            obj.Enabled=false
+        elseif obj:IsA("BillboardGui") and LagSettings.Billboards then
             SaveOriginalState(obj)
             obj.Enabled=false
         end
