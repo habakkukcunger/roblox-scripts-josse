@@ -269,26 +269,31 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP - SINGLE beam from TORSO, 55 studs, bright red
+-- Face ESP - STABLE: Attachments parented to character, offset via local Position
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if not FaceESP then return end
     for _,p in ipairs(P:GetPlayers()) do
         if p~=LP and not IT(p) and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 then
-            -- Use Torso (HumanoidRootPart) instead of Head
             local torso=p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso")
             if not torso then continue end
             local d=ActiveBeams[p]
             if not d then
-                local a0,a1=Instance.new("Attachment",workspace.Terrain),Instance.new("Attachment",workspace.Terrain)
+                -- Parent attachments directly to torso so they move with the character naturally
+                local a0,a1=Instance.new("Attachment",torso),Instance.new("Attachment",torso)
+                -- a0 at center, a1 offset forward by 55 studs in local space
+                a0.Position=Vector3.new(0,0,0)
+                a1.Position=Vector3.new(0,0,-55)
                 local b=Instance.new("Beam",workspace.Terrain)
-                -- Single beam: bright red, medium width, no glow
                 b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset,b.Transparency=a0,a1,0.35,0.35,ColorSequence.new(Color3.fromRGB(255,0,0)),true,0.3,0,2,NumberSequence.new(0)
-                d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
+                d={Beam=b,A0=a0,A1=a1,Torso=torso}ActiveBeams[p]=d
             end
-            local l=torso.CFrame.LookVector local f=Vector3.new(l.X,0,l.Z).Unit
-            d.A0.WorldPosition=torso.Position+(f*0.6) d.A1.WorldPosition=torso.Position+(f*55)
+            -- Only update if torso changed (new character, respawn, etc.)
+            if d.Torso~=torso then
+                pcall(function() d.Beam:Destroy() d.A0:Destroy() d.A1:Destroy() end)
+                ActiveBeams[p]=nil
+            end
         elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
     end
 end)
