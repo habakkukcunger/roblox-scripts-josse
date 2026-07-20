@@ -138,7 +138,7 @@ local function CreateToggleRow(parent, text, callback)
     Lb.Text = text
     Lb.TextColor3 = TEXT_SECONDARY
     Lb.TextSize = 11
-    Lb.Font = Enum.Font.GothamMedium
+    Lbb.Font = Enum.Font.GothamMedium
     Lb.TextXAlignment = Enum.TextXAlignment.Left
     Lb.BackgroundTransparency = 1
     
@@ -187,64 +187,10 @@ CreateToggleRow(M, "Direction Facing Esp", function(v)
     if not v then CE() end
 end)
 
--- Anti-Lag Section
-local AntiLagSection = Instance.new("Frame", M)
-AntiLagSection.Size = UDim2.new(1, 0, 0, 30)
-AntiLagSection.BackgroundColor3 = BG_PANEL
-AntiLagSection.BorderSizePixel = 0
-Instance.new("UICorner", AntiLagSection).CornerRadius = UDim.new(0, 5)
-
-local AntiLagLabel = Instance.new("TextLabel", AntiLagSection)
-AntiLagLabel.Size = UDim2.new(1, -50, 1, 0)
-AntiLagLabel.Position = UDim2.new(0, 10, 0, 0)
-AntiLagLabel.Text = "ANTI-LAG"
-AntiLagLabel.TextColor3 = TEXT_SECONDARY
-AntiLagLabel.TextSize = 11
-AntiLagLabel.Font = Enum.Font.GothamMedium
-AntiLagLabel.TextXAlignment = Enum.TextXAlignment.Left
-AntiLagLabel.BackgroundTransparency = 1
-
-local CollapseBtn = Instance.new("TextButton", AntiLagSection)
-CollapseBtn.Size = UDim2.new(0, 32, 0, 20)
-CollapseBtn.Position = UDim2.new(1, -42, 0.5, -10)
-CollapseBtn.Text = "▶"
-CollapseBtn.Font = Enum.Font.GothamBold
-CollapseBtn.TextSize = 10
-CollapseBtn.BackgroundColor3 = BG_BUTTON
-CollapseBtn.TextColor3 = TEXT_DIM
-CollapseBtn.AutoButtonColor = false
-CollapseBtn.BorderSizePixel = 0
-Instance.new("UICorner", CollapseBtn).CornerRadius = UDim.new(0, 4)
-
--- Settings Container (parented to M, starts hidden)
-local SettingsContainer = Instance.new("Frame", M)
-SettingsContainer.Size = UDim2.new(1, 0, 0, 0)
-SettingsContainer.BackgroundTransparency = 1
-SettingsContainer.BorderSizePixel = 0
-SettingsContainer.ClipsDescendants = true
-SettingsContainer.Visible = false
-
-local SettingsList = Instance.new("UIListLayout", SettingsContainer)
-SettingsList.Padding = UDim.new(0, 6)
-SettingsList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-SettingsList.VerticalAlignment = Enum.VerticalAlignment.Top
-
--- Anti-Lag System
-local LagSettings = {
-    Textures = true, Shadows = true, Particles = true, MeshDetail = true,
-    LightingQuality = true, Billboards = true, Skybox = true,
-    Atmosphere = true, Reflections = true, PostProcessing = true
-}
+-- ANTI-LAG SYSTEM
+local AntiLagEnabled = false
 local OriginalStates = {}
-local SavedSkybox, SavedAtmosphere, SavedReflection, SavedPostProcessing = nil, nil, nil, nil
-local CurrentPreset = "OFF"
-
-local Presets = {
-    OFF = {Textures=false, Shadows=false, Particles=false, MeshDetail=false, LightingQuality=false, Billboards=false, Skybox=false, Atmosphere=false, Reflections=false, PostProcessing=false},
-    LOW = {Textures=true, Shadows=true, Particles=true, MeshDetail=true, LightingQuality=true, Billboards=true, Skybox=true, Atmosphere=true, Reflections=true, PostProcessing=true},
-    MEDIUM = {Textures=true, Shadows=false, Particles=true, MeshDetail=true, LightingQuality=false, Billboards=true, Skybox=false, Atmosphere=false, Reflections=true, PostProcessing=true},
-    HIGH = {Textures=true, Shadows=false, Particles=false, MeshDetail=true, LightingQuality=false, Billboards=false, Skybox=false, Atmosphere=false, Reflections=false, PostProcessing=false}
-}
+local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
 
 local function SaveOriginalState(obj)
     if OriginalStates[obj] then return end
@@ -258,124 +204,129 @@ local function SaveOriginalState(obj)
     elseif obj:IsA("Texture") or obj:IsA("Decal") then
         state.Texture = obj.Texture
         state.Transparency = obj.Transparency
-    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
         state.Enabled = obj.Enabled
     elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
         state.Enabled = obj.Enabled
         state.Brightness = obj.Brightness
-    elseif obj:IsA("BillboardGui") then
+    elseif obj:IsA("BillboardGui") or obj:IsA("ScreenGui") then
         state.Enabled = obj.Enabled
     end
     if next(state) then OriginalStates[obj] = state end
 end
 
 local function ApplyAntiLag()
-    if CurrentPreset == "OFF" then return end
     local lighting = game:GetService("Lighting")
-
-    if LagSettings.Skybox then
-        local sky = lighting:FindFirstChildOfClass("Sky")
-        if sky and not SavedSkybox then
-            SavedSkybox = sky:Clone()
-            sky.Parent = nil
+    
+    -- Gray sky (remove skybox)
+    local sky = lighting:FindFirstChildOfClass("Sky")
+    if sky and not SavedSkybox then
+        SavedSkybox = sky:Clone()
+        sky.Parent = nil
+    end
+    
+    -- Remove atmosphere
+    local atm = lighting:FindFirstChildOfClass("Atmosphere")
+    if atm and not SavedAtmosphere then
+        SavedAtmosphere = atm:Clone()
+        atm.Parent = nil
+    end
+    
+    -- Remove clouds
+    for _, cloud in ipairs(lighting:GetChildren()) do
+        if cloud:IsA("Clouds") then
+            pcall(function() cloud.Parent = nil end)
         end
     end
-
-    if LagSettings.Atmosphere then
-        local atm = lighting:FindFirstChildOfClass("Atmosphere")
-        if atm and not SavedAtmosphere then
-            SavedAtmosphere = atm:Clone()
-            atm.Parent = nil
+    
+    -- Remove post-processing effects
+    for _, effect in ipairs(lighting:GetChildren()) do
+        if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("Atmosphere") then
+            pcall(function() effect.Enabled = false end)
         end
     end
-
-    if LagSettings.Reflections then
-        if not SavedReflection then
-            SavedReflection = lighting.EnvironmentDiffuseScale
-        end
-        lighting.EnvironmentDiffuseScale = 0
-        lighting.EnvironmentSpecularScale = 0
+    
+    -- Force gray background
+    lighting.Ambient = Color3.fromRGB(128, 128, 128)
+    lighting.Brightness = 2
+    lighting.ColorShift_Bottom = Color3.fromRGB(128, 128, 128)
+    lighting.ColorShift_Top = Color3.fromRGB(128, 128, 128)
+    lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    
+    -- Save and change lighting tech
+    if not SavedLightingTech then
+        SavedLightingTech = lighting.Technology
+        SavedGlobalShadows = lighting.GlobalShadows
     end
-
-    if LagSettings.PostProcessing then
-        SavedPostProcessing = SavedPostProcessing or {}
-        for _, effect in ipairs(lighting:GetChildren()) do
-            if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
-                if not SavedPostProcessing[effect] then
-                    SavedPostProcessing[effect] = effect.Enabled
-                end
-                effect.Enabled = false
-            end
-        end
-    end
-
+    lighting.Technology = Enum.Technology.Compatibility
+    lighting.GlobalShadows = false
+    
+    -- Strip all workspace visuals
     for _, obj in ipairs(workspace:GetDescendants()) do
         pcall(function()
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                 SaveOriginalState(obj)
-                if LagSettings.Textures then
-                    obj.Material = Enum.Material.SmoothPlastic
-                    if obj:IsA("MeshPart") then
-                        obj.TextureID = ""
-                    end
+                obj.Material = Enum.Material.SmoothPlastic
+                if obj:IsA("MeshPart") then
+                    obj.TextureID = ""
                 end
-            elseif (obj:IsA("Texture") or obj:IsA("Decal")) and LagSettings.Textures then
+            elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
                 SaveOriginalState(obj)
                 obj.Transparency = 1
-            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail")) and LagSettings.Particles then
+            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles")) then
                 SaveOriginalState(obj)
                 obj.Enabled = false
-            elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
+            elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
                 SaveOriginalState(obj)
                 obj.Enabled = false
-            elseif obj:IsA("BillboardGui") and LagSettings.Billboards then
+            elseif obj:IsA("BillboardGui") then
                 SaveOriginalState(obj)
                 obj.Enabled = false
+            elseif obj:IsA("Water") then
+                -- Water can't be fully removed, but we can make it invisible
+                SaveOriginalState(obj)
+                obj.Transparency = 1
             end
         end)
     end
-
-    if LagSettings.LightingQuality then
-        OriginalStates[lighting] = OriginalStates[lighting] or {}
-        if not OriginalStates[lighting].Technology then
-            OriginalStates[lighting].Technology = lighting.Technology
-        end
-        if not OriginalStates[lighting].GlobalShadows then
-            OriginalStates[lighting].GlobalShadows = lighting.GlobalShadows
-        end
-        lighting.Technology = Enum.Technology.Compatibility
-        lighting.GlobalShadows = false
+    
+    -- Optimize terrain
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    if terrain then
+        terrain.Decoration = false
+        terrain.WaterColor = Color3.fromRGB(128, 128, 128)
+        terrain.WaterTransparency = 1
+        terrain.WaterWaveSize = 0
+        terrain.WaterWaveSpeed = 0
     end
 end
 
 local function RestoreOriginal()
     local lighting = game:GetService("Lighting")
-
+    
+    -- Restore skybox
     if SavedSkybox then
         SavedSkybox.Parent = lighting
         SavedSkybox = nil
     end
-
+    
+    -- Restore atmosphere
     if SavedAtmosphere then
         SavedAtmosphere.Parent = lighting
         SavedAtmosphere = nil
     end
-
-    if SavedReflection then
-        lighting.EnvironmentDiffuseScale = SavedReflection
-        lighting.EnvironmentSpecularScale = SavedReflection
-        SavedReflection = nil
+    
+    -- Restore lighting
+    if SavedLightingTech then
+        lighting.Technology = SavedLightingTech
+        SavedLightingTech = nil
     end
-
-    if SavedPostProcessing then
-        for effect, enabled in pairs(SavedPostProcessing) do
-            if effect and effect.Parent then
-                effect.Enabled = enabled
-            end
-        end
-        SavedPostProcessing = nil
+    if SavedGlobalShadows ~= nil then
+        lighting.GlobalShadows = SavedGlobalShadows
+        SavedGlobalShadows = nil
     end
-
+    
+    -- Restore all objects
     for obj, state in pairs(OriginalStates) do
         pcall(function()
             if obj:IsA("BasePart") then
@@ -385,207 +336,61 @@ local function RestoreOriginal()
             elseif obj:IsA("Texture") or obj:IsA("Decal") then
                 if state.Texture then obj.Texture = state.Texture end
                 if state.Transparency then obj.Transparency = state.Transparency end
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
                 if state.Enabled ~= nil then obj.Enabled = state.Enabled end
             elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
                 if state.Enabled ~= nil then obj.Enabled = state.Enabled end
                 if state.Brightness then obj.Brightness = state.Brightness end
             elseif obj:IsA("BillboardGui") then
                 if state.Enabled ~= nil then obj.Enabled = state.Enabled end
+            elseif obj:IsA("Water") then
+                if state.Transparency then obj.Transparency = state.Transparency end
             end
         end)
     end
-
-    if OriginalStates[lighting] then
-        if OriginalStates[lighting].Technology then lighting.Technology = OriginalStates[lighting].Technology end
-        if OriginalStates[lighting].GlobalShadows ~= nil then lighting.GlobalShadows = OriginalStates[lighting].GlobalShadows end
+    
+    -- Restore terrain
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    if terrain then
+        terrain.Decoration = true
+        terrain.WaterColor = Color3.fromRGB(12, 84, 92)
+        terrain.WaterTransparency = 0.3
+        terrain.WaterWaveSize = 0.15
+        terrain.WaterWaveSpeed = 10
     end
+    
     OriginalStates = {}
 end
 
-local function ApplyPreset(presetName)
-    CurrentPreset = presetName
-    for k, v in pairs(Presets[presetName]) do
-        LagSettings[k] = v
-    end
-    if presetName == "OFF" then
-        RestoreOriginal()
-    else
-        RestoreOriginal()
-        task.wait(0.05)
+-- Anti-Lag Toggle Row
+local AntiLagCd, AntiLagBtn = CreateToggleRow(M, "Anti-Lag", function(v)
+    AntiLagEnabled = v
+    if v then
         ApplyAntiLag()
-    end
-end
-
--- Preset Panel
-local PresetFrame = Instance.new("Frame", SettingsContainer)
-PresetFrame.Size = UDim2.new(1, 0, 0, 46)
-PresetFrame.BackgroundColor3 = BG_PANEL
-PresetFrame.BorderSizePixel = 0
-Instance.new("UICorner", PresetFrame).CornerRadius = UDim.new(0, 5)
-
-local PresetTitle = Instance.new("TextLabel", PresetFrame)
-PresetTitle.Size = UDim2.new(1, 0, 0, 14)
-PresetTitle.Position = UDim2.new(0, 0, 0, 4)
-PresetTitle.Text = "QUALITY PRESET"
-PresetTitle.TextColor3 = ACCENT
-PresetTitle.TextSize = 9
-PresetTitle.Font = Enum.Font.GothamBold
-PresetTitle.BackgroundTransparency = 1
-
-local PresetButtons = {}
-local PRESET_COLORS = {
-    OFF = Color3.fromRGB(60, 60, 65),
-    LOW = Color3.fromRGB(235, 35, 75),
-    MED = Color3.fromRGB(235, 120, 35),
-    HIGH = Color3.fromRGB(35, 180, 75)
-}
-
-local function MakePresetButton(name, xPos, color)
-    local B = Instance.new("TextButton", PresetFrame)
-    B.Size = UDim2.new(0, 42, 0, 20)
-    B.Position = UDim2.new(0, xPos, 0, 20)
-    B.Text = name
-    B.Font = Enum.Font.GothamBold
-    B.TextSize = 7
-    B.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-    B.TextColor3 = TEXT_DIM
-    B.AutoButtonColor = false
-    B.BorderSizePixel = 0
-    Instance.new("UICorner", B).CornerRadius = UDim.new(0, 3)
-    
-    PresetButtons[name] = B
-    
-    B.MouseButton1Click:Connect(function()
-        for n, btn in pairs(PresetButtons) do
-            btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-            btn.TextColor3 = TEXT_DIM
-        end
-        B.BackgroundColor3 = color
-        B.TextColor3 = TEXT_PRIMARY
-        ApplyPreset(name)
-    end)
-    
-    return B
-end
-
-MakePresetButton("OFF", 8, PRESET_COLORS.OFF)
-MakePresetButton("LOW", 54, PRESET_COLORS.LOW)
-MakePresetButton("MED", 100, PRESET_COLORS.MED)
-MakePresetButton("HIGH", 146, PRESET_COLORS.HIGH)
-
-PresetButtons["OFF"].BackgroundColor3 = PRESET_COLORS.OFF
-PresetButtons["OFF"].TextColor3 = TEXT_PRIMARY
-
--- Custom Settings
-local LagFrame = Instance.new("Frame", SettingsContainer)
-LagFrame.Size = UDim2.new(1, 0, 0, 120)
-LagFrame.BackgroundColor3 = BG_PANEL
-LagFrame.BorderSizePixel = 0
-Instance.new("UICorner", LagFrame).CornerRadius = UDim.new(0, 5)
-
-local LagTitle = Instance.new("TextLabel", LagFrame)
-LagTitle.Size = UDim2.new(1, 0, 0, 14)
-LagTitle.Position = UDim2.new(0, 0, 0, 4)
-LagTitle.Text = "CUSTOM SETTINGS"
-LagTitle.TextColor3 = ACCENT
-LagTitle.TextSize = 9
-LagTitle.Font = Enum.Font.GothamBold
-LagTitle.BackgroundTransparency = 1
-
-local function LagToggle(name, setting, xPos, yPos)
-    local Lb = Instance.new("TextLabel", LagFrame)
-    Lb.Size = UDim2.new(0, 60, 0, 12)
-    Lb.Position = UDim2.new(0, xPos, 0, yPos)
-    Lb.Text = name
-    Lb.TextColor3 = Color3.fromRGB(180, 180, 185)
-    Lb.TextSize = 7
-    Lb.Font = Enum.Font.GothamMedium
-    Lb.TextXAlignment = Enum.TextXAlignment.Left
-    Lb.BackgroundTransparency = 1
-    
-    local B = Instance.new("TextButton", LagFrame)
-    B.Size = UDim2.new(0, 26, 0, 12)
-    B.Position = UDim2.new(0, xPos + 62, 0, yPos)
-    B.Text = "ON"
-    B.Font = Enum.Font.GothamBold
-    B.TextSize = 6
-    B.BackgroundColor3 = BG_BUTTON_ON
-    B.TextColor3 = TEXT_PRIMARY
-    B.AutoButtonColor = false
-    B.BorderSizePixel = 0
-    Instance.new("UICorner", B).CornerRadius = UDim.new(0, 2)
-    
-    B.MouseButton1Click:Connect(function()
-        LagSettings[setting] = not LagSettings[setting]
-        B.Text = LagSettings[setting] and "ON" or "OFF"
-        B.BackgroundColor3 = LagSettings[setting] and BG_BUTTON_ON or BG_BUTTON
-        B.TextColor3 = LagSettings[setting] and TEXT_PRIMARY or TEXT_DIM
-        CurrentPreset = "CUSTOM"
-        for n, btn in pairs(PresetButtons) do
-            btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-            btn.TextColor3 = TEXT_DIM
-        end
-        if CurrentPreset ~= "OFF" then
-            RestoreOriginal()
-            ApplyAntiLag()
-        end
-    end)
-end
-
-LagToggle("Textures", "Textures", 10, 20)
-LagToggle("Shadows", "Shadows", 10, 36)
-LagToggle("Particles", "Particles", 10, 52)
-LagToggle("Mesh", "MeshDetail", 10, 68)
-LagToggle("Billboards", "Billboards", 10, 84)
-
-LagToggle("Skybox", "Skybox", 118, 20)
-LagToggle("Atmosphere", "Atmosphere", 118, 36)
-LagToggle("Reflections", "Reflections", 118, 52)
-LagToggle("PostFX", "PostProcessing", 118, 68)
-
--- Collapse/Expand with hardcoded heights
-local BASE_HEIGHT = 180
-local EXPANDED_HEIGHT = BASE_HEIGHT + 46 + 6 + 120 + 6  -- presets + gap + settings + gap
-
-local isExpanded = false
-local function UpdateCollapse()
-    if isExpanded then
-        SettingsContainer.Visible = true
-        CollapseBtn.Text = "▼"
-        M.Size = UDim2.new(0, 220, 0, EXPANDED_HEIGHT)
     else
-        SettingsContainer.Visible = false
-        CollapseBtn.Text = "▶"
-        M.Size = UDim2.new(0, 220, 0, BASE_HEIGHT)
+        RestoreOriginal()
     end
-    Clamp()
-end
-
-CollapseBtn.MouseButton1Click:Connect(function()
-    isExpanded = not isExpanded
-    UpdateCollapse()
 end)
 
--- Auto-reapply
+-- Auto-reapply for new objects
 workspace.DescendantAdded:Connect(function(obj)
-    if CurrentPreset == "OFF" then return end
+    if not AntiLagEnabled then return end
     task.wait(0.1)
     pcall(function()
-        if obj:IsA("BasePart") and not obj:IsA("Terrain") and LagSettings.Textures then
+        if obj:IsA("BasePart") and not obj:IsA("Terrain") then
             SaveOriginalState(obj)
             obj.Material = Enum.Material.SmoothPlastic
             if obj:IsA("MeshPart") then obj.TextureID = "" end
-        elseif (obj:IsA("Texture") or obj:IsA("Decal")) and LagSettings.Textures then
+        elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
             SaveOriginalState(obj)
             obj.Transparency = 1
-        elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail")) and LagSettings.Particles then
+        elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles")) then
             SaveOriginalState(obj)
             obj.Enabled = false
-        elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) and LagSettings.Shadows then
+        elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
             SaveOriginalState(obj)
             obj.Enabled = false
-        elseif obj:IsA("BillboardGui") and LagSettings.Billboards then
+        elseif obj:IsA("BillboardGui") then
             SaveOriginalState(obj)
             obj.Enabled = false
         end
@@ -703,8 +508,6 @@ task.spawn(function()
     M.Visible = true
     Tg.Visible = true
     Clamp()
-    isExpanded = false
-    UpdateCollapse()
 end)
 
 -- Shiftlock
