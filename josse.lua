@@ -7,7 +7,6 @@ local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
 -- Constants
 local ACCENT = Color3.fromRGB(235, 35, 75)
-local ACCENT_HOVER = Color3.fromRGB(255, 60, 100)
 local BG_DARK = Color3.fromRGB(12, 12, 15)
 local BG_PANEL = Color3.fromRGB(18, 18, 22)
 local BG_BUTTON = Color3.fromRGB(28, 28, 34)
@@ -15,9 +14,7 @@ local BG_BUTTON_ON = Color3.fromRGB(235, 35, 75)
 local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
-local TEXT_OFF = Color3.fromRGB(100, 100, 105)
 local CORNER_RADIUS = UDim.new(0, 6)
-local STROKE_THICKNESS = 1.2
 
 -- Main Frame
 local M=Instance.new("Frame",UI)
@@ -29,11 +26,12 @@ M.Active = true
 M.Draggable = true
 M.Visible = false
 M.BorderSizePixel = 0
+M.ClipsDescendants = true
 
 Instance.new("UICorner", M).CornerRadius = CORNER_RADIUS
 local S=Instance.new("UIStroke", M)
 S.Color = ACCENT
-S.Thickness = STROKE_THICKNESS
+S.Thickness = 1.2
 S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 -- Padding
@@ -75,7 +73,6 @@ local Div=Instance.new("Frame", M)
 Div.Size = UDim2.new(1, 0, 0, 1)
 Div.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 Div.BorderSizePixel = 0
-Div.BackgroundTransparency = 0
 
 -- Toggle Button (HIDE/SHOW)
 local Tg=Instance.new("TextButton", UI)
@@ -94,14 +91,6 @@ Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 6)
 local TgS=Instance.new("UIStroke", Tg)
 TgS.Color = ACCENT
 TgS.Thickness = 1
-
--- Hover effect for Tg
-Tg.MouseEnter:Connect(function()
-    TweenService:Create(Tg, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(25, 25, 30)}):Play()
-end)
-Tg.MouseLeave:Connect(function()
-    TweenService:Create(Tg, TweenInfo.new(0.15), {BackgroundColor3 = BG_DARK}):Play()
-end)
 
 Tg.MouseButton1Click:Connect(function()
     M.Visible = not M.Visible
@@ -182,17 +171,6 @@ local function CreateToggleRow(parent, text, callback)
         callback(st)
     end)
     
-    B.MouseEnter:Connect(function()
-        if not st then
-            TweenService:Create(B, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(38, 38, 44)}):Play()
-        end
-    end)
-    B.MouseLeave:Connect(function()
-        if not st then
-            TweenService:Create(B, TweenInfo.new(0.15), {BackgroundColor3 = BG_BUTTON}):Play()
-        end
-    end)
-    
     return Cd, B
 end
 
@@ -237,7 +215,7 @@ AntiLagLabel.BackgroundTransparency = 1
 local CollapseBtn = Instance.new("TextButton", AntiLagSection)
 CollapseBtn.Size = UDim2.new(0, 32, 0, 22)
 CollapseBtn.Position = UDim2.new(1, -44, 0.5, -11)
-CollapseBtn.Text = "▼"
+CollapseBtn.Text = "▶"
 CollapseBtn.Font = Enum.Font.GothamBold
 CollapseBtn.TextSize = 10
 CollapseBtn.BackgroundColor3 = BG_BUTTON
@@ -246,12 +224,13 @@ CollapseBtn.AutoButtonColor = false
 CollapseBtn.BorderSizePixel = 0
 Instance.new("UICorner", CollapseBtn).CornerRadius = UDim.new(0, 4)
 
--- Settings Container
+-- Settings Container (parented to M, starts hidden)
 local SettingsContainer = Instance.new("Frame", M)
 SettingsContainer.Size = UDim2.new(1, 0, 0, 0)
 SettingsContainer.BackgroundTransparency = 1
 SettingsContainer.BorderSizePixel = 0
 SettingsContainer.ClipsDescendants = true
+SettingsContainer.Visible = false
 
 local SettingsList = Instance.new("UIListLayout", SettingsContainer)
 SettingsList.Padding = UDim.new(0, 8)
@@ -573,18 +552,20 @@ LagToggle("Atmosphere", "Atmosphere", 130, 40)
 LagToggle("Reflections", "Reflections", 130, 58)
 LagToggle("PostFX", "PostProcessing", 130, 76)
 
--- Collapse/Expand
+-- FIXED: Proper collapse/expand with hardcoded heights
+local BASE_HEIGHT = 180
+local EXPANDED_HEIGHT = BASE_HEIGHT + 50 + 8 + 130 + 8  -- presets + gap + settings + gap
+
 local isExpanded = false
 local function UpdateCollapse()
     if isExpanded then
         SettingsContainer.Visible = true
         CollapseBtn.Text = "▼"
-        local contentHeight = SettingsContainer.AbsoluteSize.Y
-        M.Size = UDim2.new(0, 240, 0, 180 + contentHeight + 8)
+        M.Size = UDim2.new(0, 240, 0, EXPANDED_HEIGHT)
     else
         SettingsContainer.Visible = false
         CollapseBtn.Text = "▶"
-        M.Size = UDim2.new(0, 240, 0, 180)
+        M.Size = UDim2.new(0, 240, 0, BASE_HEIGHT)
     end
     Clamp()
 end
