@@ -16,10 +16,46 @@ M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal(
 
 local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
 
+-- Draggable HIDE/SHOW button with clamping
 local Tg=Instance.new("TextButton",UI)Tg.Size,Tg.Position,Tg.Text,Tg.TextColor3,Tg.Font,Tg.TextSize,Tg.BackgroundColor3,Tg.Visible=UDim2.new(0,65,0,24),UDim2.new(1,-85,0,45),"HIDE",Color3.fromRGB(240,240,240),Enum.Font.GothamBold,9,Color3.fromRGB(15,15,18),false
 Instance.new("UICorner",Tg).CornerRadius=UDim.new(0,5)
 Instance.new("UIStroke",Tg).Color,Instance.new("UIStroke",Tg).Thickness=Color3.fromRGB(235,35,75),1
 Tg.MouseButton1Click:Connect(function() M.Visible=not M.Visible Tg.Text=M.Visible and "HIDE" or "SHOW" end)
+
+-- Make Tg draggable with clamping
+Tg.Active=true
+local draggingTg=false
+local dragStartTg, startPosTg
+
+Tg.InputBegan:Connect(function(input)
+    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+        draggingTg=true
+        dragStartTg=input.Position
+        startPosTg=Tg.Position
+        input.Changed:Connect(function()
+            if input.UserInputState==Enum.UserInputState.End then
+                draggingTg=false
+            end
+        end)
+    end
+end)
+
+Tg.InputChanged:Connect(function(input)
+    if draggingTg and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+        local delta=input.Position-dragStartTg
+        local vs=C.ViewportSize
+        local newX=math.clamp(startPosTg.X.Offset+delta.X,0,vs.X-Tg.AbsoluteSize.X)
+        local newY=math.clamp(startPosTg.Y.Offset+delta.Y,0,vs.Y-Tg.AbsoluteSize.Y)
+        Tg.Position=UDim2.new(0,newX,0,newY)
+    end
+end)
+
+C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+    local vs=C.ViewportSize
+    local newX=math.clamp(Tg.AbsolutePosition.X,0,vs.X-Tg.AbsoluteSize.X)
+    local newY=math.clamp(Tg.AbsolutePosition.Y,0,vs.Y-Tg.AbsoluteSize.Y)
+    Tg.Position=UDim2.new(0,newX,0,newY)
+end)
 
 local function MB(txt,cb)
     local Cd=Instance.new("Frame",M)Cd.Size,Cd.BackgroundColor3,Cd.BorderSizePixel=UDim2.new(1,-20,0,30),Color3.fromRGB(18,18,22),0
@@ -272,7 +308,7 @@ local function LagToggle(name,setting,xPos,yPos)
             btn.BackgroundColor3=Color3.fromRGB(28,28,34)
             btn.TextColor3=Color3.fromRGB(140,140,145)
         end
-        if AntiLag then
+        if CurrentPreset~="OFF" then
             RestoreOriginal()
             ApplyAntiLag()
         end
