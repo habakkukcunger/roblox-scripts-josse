@@ -5,7 +5,7 @@ if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 local SL,FaceESP,ActiveBeams,AntiLag,JT,JP,TD=false,false,{},false,nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,320),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,180),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
@@ -45,7 +45,6 @@ Tg.InputChanged:Connect(function(input)
     if draggingTg and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
         local delta=input.Position-dragStartTg
         local vs=C.ViewportSize
-        -- FIXED: Clamp margin reduced to 0 for edge-to-edge dragging
         local newX=math.clamp(startPosTg.X.Offset+delta.X,0,vs.X-Tg.AbsoluteSize.X)
         local newY=math.clamp(startPosTg.Y.Offset+delta.Y,0,vs.Y-Tg.AbsoluteSize.Y)
         Tg.Position=UDim2.new(0,newX,0,newY)
@@ -77,6 +76,20 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
+
+-- COLLAPSIBLE Anti-Lag Section
+local AntiLagSection=Instance.new("Frame",M)AntiLagSection.Size,AntiLagSection.BackgroundColor3,AntiLagSection.BorderSizePixel=UDim2.new(1,-20,0,24),Color3.fromRGB(18,18,22),0
+Instance.new("UICorner",AntiLagSection).CornerRadius=UDim.new(0,5)
+
+local AntiLagLabel=Instance.new("TextLabel",AntiLagSection)AntiLagLabel.Size,AntiLagLabel.Position,AntiLagLabel.Text,AntiLagLabel.TextColor3,AntiLagLabel.TextSize,AntiLagLabel.Font,AntiLagLabel.BackgroundTransparency=UDim2.new(1,-60,1,0),UDim2.new(0,10,0,0),"ANTI-LAG",Color3.fromRGB(210,210,215),11,Enum.Font.GothamMedium,1
+
+local CollapseBtn=Instance.new("TextButton",AntiLagSection)CollapseBtn.Size,CollapseBtn.Position,CollapseBtn.Text,CollapseBtn.Font,CollapseBtn.TextSize,CollapseBtn.BackgroundColor3,CollapseBtn.TextColor3=UDim2.new(0,40,0,18),UDim2.new(1,-50,0,3),"▼",Enum.Font.GothamBold,9,Color3.fromRGB(28,28,34),Color3.fromRGB(140,140,145)
+Instance.new("UICorner",CollapseBtn).CornerRadius=UDim.new(0,4)
+
+-- Container for preset + custom settings (collapsible)
+local SettingsContainer=Instance.new("Frame",M)SettingsContainer.Size,SettingsContainer.BackgroundTransparency=UDim2.new(1,0,0,0),1
+SettingsContainer.BorderSizePixel=0
+local SettingsList=Instance.new("UIListLayout",SettingsContainer)SettingsList.Padding,SettingsList.HorizontalAlignment,SettingsList.VerticalAlignment=UDim.new(0,6),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Top
 
 -- Anti-Lag System with PRESETS
 local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true}
@@ -263,8 +276,8 @@ local function ApplyPreset(presetName)
     end
 end
 
--- Anti-Lag Preset Panel
-local PresetFrame=Instance.new("Frame",M)PresetFrame.Size,PresetFrame.BackgroundColor3,PresetFrame.BorderSizePixel=UDim2.new(1,-20,0,40),Color3.fromRGB(18,18,22),0
+-- Anti-Lag Preset Panel (inside SettingsContainer)
+local PresetFrame=Instance.new("Frame",SettingsContainer)PresetFrame.Size,PresetFrame.BackgroundColor3,PresetFrame.BorderSizePixel=UDim2.new(1,-20,0,40),Color3.fromRGB(18,18,22),0
 Instance.new("UICorner",PresetFrame).CornerRadius=UDim.new(0,5)
 local PresetTitle=Instance.new("TextLabel",PresetFrame)PresetTitle.Size,PresetTitle.Position,PresetTitle.Text,PresetTitle.TextColor3,PresetTitle.TextSize,PresetTitle.Font,PresetTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"QUALITY PRESET",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
 
@@ -291,8 +304,8 @@ MakePresetButton("HIGH",146,Color3.fromRGB(35,180,75))
 PresetButtons["OFF"].BackgroundColor3=Color3.fromRGB(60,60,65)
 PresetButtons["OFF"].TextColor3=Color3.fromRGB(255,255,255)
 
--- Anti-Lag Toggle with Compact Settings (Custom mode)
-local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,110),Color3.fromRGB(18,18,22),0
+-- Anti-Lag Custom Settings (inside SettingsContainer)
+local LagFrame=Instance.new("Frame",SettingsContainer)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,110),Color3.fromRGB(18,18,22),0
 Instance.new("UICorner",LagFrame).CornerRadius=UDim.new(0,5)
 local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"CUSTOM SETTINGS",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
 
@@ -327,6 +340,26 @@ LagToggle("Skybox","Skybox",110,16)
 LagToggle("Atmosphere","Atmosphere",110,32)
 LagToggle("Reflections","Reflections",110,48)
 LagToggle("PostFX","PostProcessing",110,64)
+
+-- Collapse/Expand functionality
+local isExpanded=false
+local function UpdateCollapse()
+    if isExpanded then
+        SettingsContainer.Visible=true
+        CollapseBtn.Text="▼"
+        M.Size=UDim2.new(0,220,0,180+SettingsContainer.AbsoluteSize.Y+6)
+    else
+        SettingsContainer.Visible=false
+        CollapseBtn.Text="▶"
+        M.Size=UDim2.new(0,220,0,180)
+    end
+    Clamp()
+end
+
+CollapseBtn.MouseButton1Click:Connect(function()
+    isExpanded=not isExpanded
+    UpdateCollapse()
+end)
 
 -- Auto-reapply when new objects spawn
 workspace.DescendantAdded:Connect(function(obj)
@@ -396,6 +429,9 @@ task.spawn(function()
     local o=TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.In)
     T:Create(It,o,{BackgroundTransparency=1}):Play()T:Create(IS,o,{Transparency=1}):Play()T:Create(BB,o,{BackgroundTransparency=1}):Play()T:Create(BF,o,{BackgroundTransparency=1}):Play()T:Create(Lb,o,{TextTransparency=1}):Play()
     task.wait(0.25)It:Destroy()M.Visible,Tg.Visible=true,true Clamp()
+    -- Start collapsed
+    isExpanded=false
+    UpdateCollapse()
 end)
 
 -- Shiftlock
