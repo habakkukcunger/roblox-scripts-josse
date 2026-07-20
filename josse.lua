@@ -6,21 +6,35 @@ local success, err = pcall(function()
     
     local LP = Players.LocalPlayer
     local C = workspace.CurrentCamera
-    local PG = LP:WaitForChild("PlayerGui", 5)
+    
+    -- Delta iOS: PlayerGui might not exist yet, wait for it
+    local PG
+    local attempts = 0
+    repeat
+        PG = LP:FindFirstChild("PlayerGui")
+        attempts = attempts + 1
+        if not PG then task.wait(0.1) end
+    until PG or attempts > 50
     
     if not PG then
-        warn("JHubV6: PlayerGui not found!")
+        warn("JHubV6: PlayerGui not found after 5 seconds!")
         return
     end
     
-    if PG:FindFirstChild("JHubV6") then 
-        PG.JHubV6:Destroy() 
+    -- Delta iOS: Destroy existing safely
+    local existing = PG:FindFirstChild("JHubV6")
+    if existing then
+        pcall(function() existing:Destroy() end)
+        task.wait(0.1)
     end
 
     local SL, FaceESP, ActiveBeams, JP, TD, JT = false, false, {}, false, nil, nil
+    
+    -- Delta iOS: Create ScreenGui with specific properties
     local UI = Instance.new("ScreenGui")
     UI.Name = "JHubV6"
     UI.ResetOnSpawn = false
+    UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     UI.Parent = PG
 
     -- Constants
@@ -46,23 +60,29 @@ local success, err = pcall(function()
     M.ClipsDescendants = true
     M.Parent = UI
 
-    Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
-    local S = Instance.new("UIStroke", M)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = M
+
+    local S = Instance.new("UIStroke")
     S.Color = ACCENT
     S.Thickness = 1.2
+    S.Parent = M
 
     -- Padding
-    local MP = Instance.new("UIPadding", M)
+    local MP = Instance.new("UIPadding")
     MP.PaddingLeft = UDim.new(0, 10)
     MP.PaddingRight = UDim.new(0, 10)
     MP.PaddingTop = UDim.new(0, 8)
     MP.PaddingBottom = UDim.new(0, 8)
+    MP.Parent = M
 
     -- Layout
-    local L = Instance.new("UIListLayout", M)
+    local L = Instance.new("UIListLayout")
     L.Padding = UDim.new(0, 6)
     L.HorizontalAlignment = Enum.HorizontalAlignment.Center
     L.VerticalAlignment = Enum.VerticalAlignment.Top
+    L.Parent = M
 
     -- Clamp to screen
     local function Clamp()
@@ -76,7 +96,7 @@ local success, err = pcall(function()
     C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
     -- Title
-    local Tl = Instance.new("TextLabel", M)
+    local Tl = Instance.new("TextLabel")
     Tl.Size = UDim2.new(1, 0, 0, 16)
     Tl.Text = "JOSSERPOPSIER"
     Tl.TextColor3 = TEXT_PRIMARY
@@ -84,6 +104,7 @@ local success, err = pcall(function()
     Tl.Font = Enum.Font.GothamBold
     Tl.BackgroundTransparency = 1
     Tl.TextXAlignment = Enum.TextXAlignment.Center
+    Tl.Parent = M
 
     -- Toggle Button (HIDE/SHOW)
     local Tg = Instance.new("TextButton")
@@ -99,10 +120,14 @@ local success, err = pcall(function()
     Tg.BorderSizePixel = 0
     Tg.Parent = UI
 
-    Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 5)
-    local TgS = Instance.new("UIStroke", Tg)
+    local tgCorner = Instance.new("UICorner")
+    tgCorner.CornerRadius = UDim.new(0, 5)
+    tgCorner.Parent = Tg
+
+    local TgS = Instance.new("UIStroke")
     TgS.Color = ACCENT
     TgS.Thickness = 1
+    TgS.Parent = Tg
 
     Tg.MouseButton1Click:Connect(function()
         M.Visible = not M.Visible
@@ -146,13 +171,17 @@ local success, err = pcall(function()
 
     -- Toggle Row Template
     local function CreateToggleRow(parent, text, callback)
-        local Cd = Instance.new("Frame", parent)
+        local Cd = Instance.new("Frame")
         Cd.Size = UDim2.new(1, 0, 0, 30)
         Cd.BackgroundColor3 = BG_PANEL
         Cd.BorderSizePixel = 0
-        Instance.new("UICorner", Cd).CornerRadius = UDim.new(0, 5)
+        Cd.Parent = parent
+
+        local cdCorner = Instance.new("UICorner")
+        cdCorner.CornerRadius = UDim.new(0, 5)
+        cdCorner.Parent = Cd
         
-        local Lb = Instance.new("TextLabel", Cd)
+        local Lb = Instance.new("TextLabel")
         Lb.Size = UDim2.new(1, -70, 1, 0)
         Lb.Position = UDim2.new(0, 10, 0, 0)
         Lb.Text = text
@@ -161,8 +190,9 @@ local success, err = pcall(function()
         Lb.Font = Enum.Font.GothamMedium
         Lb.TextXAlignment = Enum.TextXAlignment.Left
         Lb.BackgroundTransparency = 1
+        Lb.Parent = Cd
         
-        local B = Instance.new("TextButton", Cd)
+        local B = Instance.new("TextButton")
         B.Size = UDim2.new(0, 48, 0, 18)
         B.Position = UDim2.new(1, -58, 0.5, -9)
         B.Text = "OFF"
@@ -172,7 +202,11 @@ local success, err = pcall(function()
         B.TextColor3 = TEXT_DIM
         B.AutoButtonColor = false
         B.BorderSizePixel = 0
-        Instance.new("UICorner", B).CornerRadius = UDim.new(0, 4)
+        B.Parent = Cd
+
+        local bCorner = Instance.new("UICorner")
+        bCorner.CornerRadius = UDim.new(0, 4)
+        bCorner.Parent = B
         
         local st = false
         B.MouseButton1Click:Connect(function()
@@ -229,7 +263,7 @@ local success, err = pcall(function()
         elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
             state.Enabled = obj.Enabled
             state.Brightness = obj.Brightness
-        elseif obj:IsA("BillboardGui") or obj:IsA("ScreenGui") then
+        elseif obj:IsA("BillboardGui") then
             state.Enabled = obj.Enabled
         end
         if next(state) then OriginalStates[obj] = state end
@@ -261,25 +295,29 @@ local success, err = pcall(function()
         
         -- Remove post-processing effects
         for _, effect in ipairs(lighting:GetChildren()) do
-            if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("Atmosphere") then
+            if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
                 pcall(function() effect.Enabled = false end)
             end
         end
         
         -- Force gray background
-        lighting.Ambient = Color3.fromRGB(128, 128, 128)
-        lighting.Brightness = 2
-        lighting.ColorShift_Bottom = Color3.fromRGB(128, 128, 128)
-        lighting.ColorShift_Top = Color3.fromRGB(128, 128, 128)
-        lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        pcall(function()
+            lighting.Ambient = Color3.fromRGB(128, 128, 128)
+            lighting.Brightness = 2
+            lighting.ColorShift_Bottom = Color3.fromRGB(128, 128, 128)
+            lighting.ColorShift_Top = Color3.fromRGB(128, 128, 128)
+            lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        end)
         
         -- Save and change lighting tech
-        if not SavedLightingTech then
-            SavedLightingTech = lighting.Technology
-            SavedGlobalShadows = lighting.GlobalShadows
-        end
-        lighting.Technology = Enum.Technology.Compatibility
-        lighting.GlobalShadows = false
+        pcall(function()
+            if not SavedLightingTech then
+                SavedLightingTech = lighting.Technology
+                SavedGlobalShadows = lighting.GlobalShadows
+            end
+            lighting.Technology = Enum.Technology.Compatibility
+            lighting.GlobalShadows = false
+        end)
         
         -- Strip all workspace visuals
         for _, obj in ipairs(workspace:GetDescendants()) do
@@ -302,22 +340,21 @@ local success, err = pcall(function()
                 elseif obj:IsA("BillboardGui") then
                     SaveOriginalState(obj)
                     obj.Enabled = false
-                elseif obj:IsA("Water") then
-                    SaveOriginalState(obj)
-                    obj.Transparency = 1
                 end
             end)
         end
         
         -- Optimize terrain
-        local terrain = workspace:FindFirstChildOfClass("Terrain")
-        if terrain then
-            terrain.Decoration = false
-            terrain.WaterColor = Color3.fromRGB(128, 128, 128)
-            terrain.WaterTransparency = 1
-            terrain.WaterWaveSize = 0
-            terrain.WaterWaveSpeed = 0
-        end
+        pcall(function()
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+            if terrain then
+                terrain.Decoration = false
+                terrain.WaterColor = Color3.fromRGB(128, 128, 128)
+                terrain.WaterTransparency = 1
+                terrain.WaterWaveSize = 0
+                terrain.WaterWaveSpeed = 0
+            end
+        end)
     end
 
     local function RestoreOriginal()
@@ -325,25 +362,27 @@ local success, err = pcall(function()
         
         -- Restore skybox
         if SavedSkybox then
-            SavedSkybox.Parent = lighting
+            pcall(function() SavedSkybox.Parent = lighting end)
             SavedSkybox = nil
         end
         
         -- Restore atmosphere
         if SavedAtmosphere then
-            SavedAtmosphere.Parent = lighting
+            pcall(function() SavedAtmosphere.Parent = lighting end)
             SavedAtmosphere = nil
         end
         
         -- Restore lighting
-        if SavedLightingTech then
-            lighting.Technology = SavedLightingTech
-            SavedLightingTech = nil
-        end
-        if SavedGlobalShadows ~= nil then
-            lighting.GlobalShadows = SavedGlobalShadows
-            SavedGlobalShadows = nil
-        end
+        pcall(function()
+            if SavedLightingTech then
+                lighting.Technology = SavedLightingTech
+                SavedLightingTech = nil
+            end
+            if SavedGlobalShadows ~= nil then
+                lighting.GlobalShadows = SavedGlobalShadows
+                SavedGlobalShadows = nil
+            end
+        end)
         
         -- Restore all objects
         for obj, state in pairs(OriginalStates) do
@@ -362,27 +401,27 @@ local success, err = pcall(function()
                     if state.Brightness then obj.Brightness = state.Brightness end
                 elseif obj:IsA("BillboardGui") then
                     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
-                elseif obj:IsA("Water") then
-                    if state.Transparency then obj.Transparency = state.Transparency end
                 end
             end)
         end
         
         -- Restore terrain
-        local terrain = workspace:FindFirstChildOfClass("Terrain")
-        if terrain then
-            terrain.Decoration = true
-            terrain.WaterColor = Color3.fromRGB(12, 84, 92)
-            terrain.WaterTransparency = 0.3
-            terrain.WaterWaveSize = 0.15
-            terrain.WaterWaveSpeed = 10
-        end
+        pcall(function()
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+            if terrain then
+                terrain.Decoration = true
+                terrain.WaterColor = Color3.fromRGB(12, 84, 92)
+                terrain.WaterTransparency = 0.3
+                terrain.WaterWaveSize = 0.15
+                terrain.WaterWaveSpeed = 10
+            end
+        end)
         
         OriginalStates = {}
     end
 
     -- Anti-Lag Toggle Row
-    local AntiLagCd, AntiLagBtn = CreateToggleRow(M, "Anti-Lag", function(v)
+    CreateToggleRow(M, "Anti-Lag", function(v)
         AntiLagEnabled = v
         if v then
             ApplyAntiLag()
@@ -480,14 +519,18 @@ local success, err = pcall(function()
         It.BackgroundColor3 = BG_DARK
         It.BorderSizePixel = 0
         It.Parent = UI
-        Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
+
+        local itCorner = Instance.new("UICorner")
+        itCorner.CornerRadius = UDim.new(0, 6)
+        itCorner.Parent = It
         
-        local IS = Instance.new("UIStroke", It)
+        local IS = Instance.new("UIStroke")
         IS.Color = ACCENT
         IS.Thickness = 1.2
         IS.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        IS.Parent = It
         
-        local Lb = Instance.new("TextLabel", It)
+        local Lb = Instance.new("TextLabel")
         Lb.Size = UDim2.new(1, 0, 0, 14)
         Lb.Position = UDim2.new(0, 0, 0, 5)
         Lb.Text = "INITIALIZING..."
@@ -495,22 +538,32 @@ local success, err = pcall(function()
         Lb.TextSize = 8
         Lb.Font = Enum.Font.GothamBold
         Lb.BackgroundTransparency = 1
+        Lb.Parent = It
         
-        local BB = Instance.new("Frame", It)
+        local BB = Instance.new("Frame")
         BB.Size = UDim2.new(1, -24, 0, 2)
         BB.Position = UDim2.new(0, 12, 1, -10)
         BB.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
         BB.BorderSizePixel = 0
-        Instance.new("UICorner", BB).CornerRadius = UDim.new(1, 0)
+        BB.Parent = It
+
+        local bbCorner = Instance.new("UICorner")
+        bbCorner.CornerRadius = UDim.new(1, 0)
+        bbCorner.Parent = BB
         
-        local BF = Instance.new("Frame", BB)
+        local BF = Instance.new("Frame")
         BF.Size = UDim2.new(0, 0, 1, 0)
         BF.BackgroundColor3 = ACCENT
         BF.BorderSizePixel = 0
-        Instance.new("UICorner", BF).CornerRadius = UDim.new(1, 0)
+        BF.Parent = BB
+
+        local bfCorner = Instance.new("UICorner")
+        bfCorner.CornerRadius = UDim.new(1, 0)
+        bfCorner.Parent = BF
         
-        local G = Instance.new("UIGradient", BF)
+        local G = Instance.new("UIGradient")
         G.Color = ColorSequence.new(ACCENT, Color3.fromRGB(255, 80, 120))
+        G.Parent = BF
         
         TweenService:Create(BF, TweenInfo.new(1.8, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
         
@@ -524,7 +577,7 @@ local success, err = pcall(function()
         TweenService:Create(Lb, o, {TextTransparency = 1}):Play()
         
         task.wait(0.25)
-        It:Destroy()
+        pcall(function() It:Destroy() end)
         M.Visible = true
         Tg.Visible = true
         Clamp()
@@ -569,5 +622,5 @@ local success, err = pcall(function()
 end)
 
 if not success then
-    warn("JHubV6 FAILED to load: " .. tostring(err))
+    warn("JHubV6 FAILED: " .. tostring(err))
 end
