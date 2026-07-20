@@ -11,7 +11,8 @@ Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
 local L=Instance.new("UIListLayout",M)L.Padding,L.HorizontalAlignment,L.VerticalAlignment=UDim.new(0,6),Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Top
 
-local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,5,vs.X-M.AbsoluteSize.X-5),0,math.clamp(M.AbsolutePosition.Y,5,vs.Y-M.AbsoluteSize.Y-5)) end
+-- FIXED: Clamp margin reduced to 0 for edge-to-edge dragging
+local function Clamp() local vs=C.ViewportSize M.Position=UDim2.new(0,math.clamp(M.AbsolutePosition.X,0,vs.X-M.AbsoluteSize.X),0,math.clamp(M.AbsolutePosition.Y,0,vs.Y-M.AbsoluteSize.Y)) end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
 local Tl=Instance.new("TextLabel",M)Tl.Size,Tl.Text,Tl.TextColor3,Tl.TextSize,Tl.Font,Tl.BackgroundTransparency=UDim2.new(1,-20,0,16),"JOSSERPOPSIER",Color3.fromRGB(255,255,255),11,Enum.Font.GothamBold,1
@@ -44,6 +45,7 @@ Tg.InputChanged:Connect(function(input)
     if draggingTg and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
         local delta=input.Position-dragStartTg
         local vs=C.ViewportSize
+        -- FIXED: Clamp margin reduced to 0 for edge-to-edge dragging
         local newX=math.clamp(startPosTg.X.Offset+delta.X,0,vs.X-Tg.AbsoluteSize.X)
         local newY=math.clamp(startPosTg.Y.Offset+delta.Y,0,vs.Y-Tg.AbsoluteSize.Y)
         Tg.Position=UDim2.new(0,newX,0,newY)
