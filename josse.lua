@@ -2,7 +2,7 @@ local P,T,U=game:GetService("Players"),game:GetService("TweenService"),game:GetS
 local LP,C,PG=P.LocalPlayer,workspace.CurrentCamera,P.LocalPlayer:WaitForChild("PlayerGui")
 if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 
-local SL,FaceESP,ActiveBeams,AntiLag,JT,JP,TD=false,false,{},false,nil,false,nil
+local SL,FaceESP,ActiveBeams,JP,TD=false,false,{},false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
 -- Constants
@@ -14,11 +14,10 @@ local BG_BUTTON_ON = Color3.fromRGB(235, 35, 75)
 local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
-local CORNER_RADIUS = UDim.new(0, 6)
 
 -- Main Frame
 local M=Instance.new("Frame",UI)
-M.Size = UDim2.new(0, 240, 0, 180)
+M.Size = UDim2.new(0, 220, 0, 180)
 M.Position = UDim2.new(0.05, 0, 0.35, 0)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.08
@@ -28,22 +27,21 @@ M.Visible = false
 M.BorderSizePixel = 0
 M.ClipsDescendants = true
 
-Instance.new("UICorner", M).CornerRadius = CORNER_RADIUS
+Instance.new("UICorner", M).CornerRadius = UDim.new(0, 8)
 local S=Instance.new("UIStroke", M)
 S.Color = ACCENT
 S.Thickness = 1.2
-S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 -- Padding
 local MP=Instance.new("UIPadding", M)
-MP.PaddingLeft = UDim.new(0, 12)
-MP.PaddingRight = UDim.new(0, 12)
-MP.PaddingTop = UDim.new(0, 10)
-MP.PaddingBottom = UDim.new(0, 10)
+MP.PaddingLeft = UDim.new(0, 10)
+MP.PaddingRight = UDim.new(0, 10)
+MP.PaddingTop = UDim.new(0, 8)
+MP.PaddingBottom = UDim.new(0, 8)
 
 -- Layout
 local L=Instance.new("UIListLayout", M)
-L.Padding = UDim.new(0, 8)
+L.Padding = UDim.new(0, 6)
 L.HorizontalAlignment = Enum.HorizontalAlignment.Center
 L.VerticalAlignment = Enum.VerticalAlignment.Top
 
@@ -60,7 +58,7 @@ C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
 -- Title
 local Tl=Instance.new("TextLabel", M)
-Tl.Size = UDim2.new(1, 0, 0, 18)
+Tl.Size = UDim2.new(1, 0, 0, 16)
 Tl.Text = "JOSSERPOPSIER"
 Tl.TextColor3 = TEXT_PRIMARY
 Tl.TextSize = 12
@@ -68,26 +66,20 @@ Tl.Font = Enum.Font.GothamBold
 Tl.BackgroundTransparency = 1
 Tl.TextXAlignment = Enum.TextXAlignment.Center
 
--- Divider
-local Div=Instance.new("Frame", M)
-Div.Size = UDim2.new(1, 0, 0, 1)
-Div.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-Div.BorderSizePixel = 0
-
 -- Toggle Button (HIDE/SHOW)
 local Tg=Instance.new("TextButton", UI)
-Tg.Size = UDim2.new(0, 70, 0, 26)
-Tg.Position = UDim2.new(1, -90, 0, 45)
+Tg.Size = UDim2.new(0, 65, 0, 24)
+Tg.Position = UDim2.new(1, -85, 0, 45)
 Tg.Text = "HIDE"
 Tg.TextColor3 = TEXT_PRIMARY
 Tg.Font = Enum.Font.GothamBold
-Tg.TextSize = 10
+Tg.TextSize = 9
 Tg.BackgroundColor3 = BG_DARK
 Tg.Visible = false
 Tg.AutoButtonColor = false
 Tg.BorderSizePixel = 0
 
-Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", Tg).CornerRadius = UDim.new(0, 5)
 local TgS=Instance.new("UIStroke", Tg)
 TgS.Color = ACCENT
 TgS.Thickness = 1
@@ -135,14 +127,14 @@ end)
 -- Toggle Row Template
 local function CreateToggleRow(parent, text, callback)
     local Cd = Instance.new("Frame", parent)
-    Cd.Size = UDim2.new(1, 0, 0, 32)
+    Cd.Size = UDim2.new(1, 0, 0, 30)
     Cd.BackgroundColor3 = BG_PANEL
     Cd.BorderSizePixel = 0
     Instance.new("UICorner", Cd).CornerRadius = UDim.new(0, 5)
     
     local Lb = Instance.new("TextLabel", Cd)
     Lb.Size = UDim2.new(1, -70, 1, 0)
-    Lb.Position = UDim2.new(0, 12, 0, 0)
+    Lb.Position = UDim2.new(0, 10, 0, 0)
     Lb.Text = text
     Lb.TextColor3 = TEXT_SECONDARY
     Lb.TextSize = 11
@@ -151,8 +143,8 @@ local function CreateToggleRow(parent, text, callback)
     Lb.BackgroundTransparency = 1
     
     local B = Instance.new("TextButton", Cd)
-    B.Size = UDim2.new(0, 48, 0, 22)
-    B.Position = UDim2.new(1, -60, 0.5, -11)
+    B.Size = UDim2.new(0, 48, 0, 18)
+    B.Position = UDim2.new(1, -58, 0.5, -9)
     B.Text = "OFF"
     B.Font = Enum.Font.GothamBold
     B.TextSize = 9
@@ -197,14 +189,14 @@ end)
 
 -- Anti-Lag Section
 local AntiLagSection = Instance.new("Frame", M)
-AntiLagSection.Size = UDim2.new(1, 0, 0, 32)
+AntiLagSection.Size = UDim2.new(1, 0, 0, 30)
 AntiLagSection.BackgroundColor3 = BG_PANEL
 AntiLagSection.BorderSizePixel = 0
 Instance.new("UICorner", AntiLagSection).CornerRadius = UDim.new(0, 5)
 
 local AntiLagLabel = Instance.new("TextLabel", AntiLagSection)
 AntiLagLabel.Size = UDim2.new(1, -50, 1, 0)
-AntiLagLabel.Position = UDim2.new(0, 12, 0, 0)
+AntiLagLabel.Position = UDim2.new(0, 10, 0, 0)
 AntiLagLabel.Text = "ANTI-LAG"
 AntiLagLabel.TextColor3 = TEXT_SECONDARY
 AntiLagLabel.TextSize = 11
@@ -213,8 +205,8 @@ AntiLagLabel.TextXAlignment = Enum.TextXAlignment.Left
 AntiLagLabel.BackgroundTransparency = 1
 
 local CollapseBtn = Instance.new("TextButton", AntiLagSection)
-CollapseBtn.Size = UDim2.new(0, 32, 0, 22)
-CollapseBtn.Position = UDim2.new(1, -44, 0.5, -11)
+CollapseBtn.Size = UDim2.new(0, 32, 0, 20)
+CollapseBtn.Position = UDim2.new(1, -42, 0.5, -10)
 CollapseBtn.Text = "▶"
 CollapseBtn.Font = Enum.Font.GothamBold
 CollapseBtn.TextSize = 10
@@ -233,7 +225,7 @@ SettingsContainer.ClipsDescendants = true
 SettingsContainer.Visible = false
 
 local SettingsList = Instance.new("UIListLayout", SettingsContainer)
-SettingsList.Padding = UDim.new(0, 8)
+SettingsList.Padding = UDim.new(0, 6)
 SettingsList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SettingsList.VerticalAlignment = Enum.VerticalAlignment.Top
 
@@ -427,13 +419,13 @@ end
 
 -- Preset Panel
 local PresetFrame = Instance.new("Frame", SettingsContainer)
-PresetFrame.Size = UDim2.new(1, 0, 0, 50)
+PresetFrame.Size = UDim2.new(1, 0, 0, 46)
 PresetFrame.BackgroundColor3 = BG_PANEL
 PresetFrame.BorderSizePixel = 0
 Instance.new("UICorner", PresetFrame).CornerRadius = UDim.new(0, 5)
 
 local PresetTitle = Instance.new("TextLabel", PresetFrame)
-PresetTitle.Size = UDim2.new(1, 0, 0, 16)
+PresetTitle.Size = UDim2.new(1, 0, 0, 14)
 PresetTitle.Position = UDim2.new(0, 0, 0, 4)
 PresetTitle.Text = "QUALITY PRESET"
 PresetTitle.TextColor3 = ACCENT
@@ -451,11 +443,11 @@ local PRESET_COLORS = {
 
 local function MakePresetButton(name, xPos, color)
     local B = Instance.new("TextButton", PresetFrame)
-    B.Size = UDim2.new(0, 46, 0, 22)
-    B.Position = UDim2.new(0, xPos, 0, 22)
+    B.Size = UDim2.new(0, 42, 0, 20)
+    B.Position = UDim2.new(0, xPos, 0, 20)
     B.Text = name
     B.Font = Enum.Font.GothamBold
-    B.TextSize = 8
+    B.TextSize = 7
     B.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
     B.TextColor3 = TEXT_DIM
     B.AutoButtonColor = false
@@ -477,23 +469,23 @@ local function MakePresetButton(name, xPos, color)
     return B
 end
 
-MakePresetButton("OFF", 10, PRESET_COLORS.OFF)
-MakePresetButton("LOW", 62, PRESET_COLORS.LOW)
-MakePresetButton("MED", 114, PRESET_COLORS.MED)
-MakePresetButton("HIGH", 166, PRESET_COLORS.HIGH)
+MakePresetButton("OFF", 8, PRESET_COLORS.OFF)
+MakePresetButton("LOW", 54, PRESET_COLORS.LOW)
+MakePresetButton("MED", 100, PRESET_COLORS.MED)
+MakePresetButton("HIGH", 146, PRESET_COLORS.HIGH)
 
 PresetButtons["OFF"].BackgroundColor3 = PRESET_COLORS.OFF
 PresetButtons["OFF"].TextColor3 = TEXT_PRIMARY
 
 -- Custom Settings
 local LagFrame = Instance.new("Frame", SettingsContainer)
-LagFrame.Size = UDim2.new(1, 0, 0, 130)
+LagFrame.Size = UDim2.new(1, 0, 0, 120)
 LagFrame.BackgroundColor3 = BG_PANEL
 LagFrame.BorderSizePixel = 0
 Instance.new("UICorner", LagFrame).CornerRadius = UDim.new(0, 5)
 
 local LagTitle = Instance.new("TextLabel", LagFrame)
-LagTitle.Size = UDim2.new(1, 0, 0, 16)
+LagTitle.Size = UDim2.new(1, 0, 0, 14)
 LagTitle.Position = UDim2.new(0, 0, 0, 4)
 LagTitle.Text = "CUSTOM SETTINGS"
 LagTitle.TextColor3 = ACCENT
@@ -503,21 +495,21 @@ LagTitle.BackgroundTransparency = 1
 
 local function LagToggle(name, setting, xPos, yPos)
     local Lb = Instance.new("TextLabel", LagFrame)
-    Lb.Size = UDim2.new(0, 60, 0, 14)
+    Lb.Size = UDim2.new(0, 60, 0, 12)
     Lb.Position = UDim2.new(0, xPos, 0, yPos)
     Lb.Text = name
     Lb.TextColor3 = Color3.fromRGB(180, 180, 185)
-    Lb.TextSize = 8
+    Lb.TextSize = 7
     Lb.Font = Enum.Font.GothamMedium
     Lb.TextXAlignment = Enum.TextXAlignment.Left
     Lb.BackgroundTransparency = 1
     
     local B = Instance.new("TextButton", LagFrame)
-    B.Size = UDim2.new(0, 28, 0, 14)
-    B.Position = UDim2.new(0, xPos + 64, 0, yPos)
+    B.Size = UDim2.new(0, 26, 0, 12)
+    B.Position = UDim2.new(0, xPos + 62, 0, yPos)
     B.Text = "ON"
     B.Font = Enum.Font.GothamBold
-    B.TextSize = 7
+    B.TextSize = 6
     B.BackgroundColor3 = BG_BUTTON_ON
     B.TextColor3 = TEXT_PRIMARY
     B.AutoButtonColor = false
@@ -541,31 +533,31 @@ local function LagToggle(name, setting, xPos, yPos)
     end)
 end
 
-LagToggle("Textures", "Textures", 12, 22)
-LagToggle("Shadows", "Shadows", 12, 40)
-LagToggle("Particles", "Particles", 12, 58)
-LagToggle("Mesh", "MeshDetail", 12, 76)
-LagToggle("Billboards", "Billboards", 12, 94)
+LagToggle("Textures", "Textures", 10, 20)
+LagToggle("Shadows", "Shadows", 10, 36)
+LagToggle("Particles", "Particles", 10, 52)
+LagToggle("Mesh", "MeshDetail", 10, 68)
+LagToggle("Billboards", "Billboards", 10, 84)
 
-LagToggle("Skybox", "Skybox", 130, 22)
-LagToggle("Atmosphere", "Atmosphere", 130, 40)
-LagToggle("Reflections", "Reflections", 130, 58)
-LagToggle("PostFX", "PostProcessing", 130, 76)
+LagToggle("Skybox", "Skybox", 118, 20)
+LagToggle("Atmosphere", "Atmosphere", 118, 36)
+LagToggle("Reflections", "Reflections", 118, 52)
+LagToggle("PostFX", "PostProcessing", 118, 68)
 
--- FIXED: Proper collapse/expand with hardcoded heights
+-- Collapse/Expand with hardcoded heights
 local BASE_HEIGHT = 180
-local EXPANDED_HEIGHT = BASE_HEIGHT + 50 + 8 + 130 + 8  -- presets + gap + settings + gap
+local EXPANDED_HEIGHT = BASE_HEIGHT + 46 + 6 + 120 + 6  -- presets + gap + settings + gap
 
 local isExpanded = false
 local function UpdateCollapse()
     if isExpanded then
         SettingsContainer.Visible = true
         CollapseBtn.Text = "▼"
-        M.Size = UDim2.new(0, 240, 0, EXPANDED_HEIGHT)
+        M.Size = UDim2.new(0, 220, 0, EXPANDED_HEIGHT)
     else
         SettingsContainer.Visible = false
         CollapseBtn.Text = "▶"
-        M.Size = UDim2.new(0, 240, 0, BASE_HEIGHT)
+        M.Size = UDim2.new(0, 220, 0, BASE_HEIGHT)
     end
     Clamp()
 end
@@ -659,8 +651,8 @@ end)
 -- Init screen
 task.spawn(function()
     local It = Instance.new("Frame", UI)
-    It.Size = UDim2.new(0, 200, 0, 40)
-    It.Position = UDim2.new(0.5, -100, 0.45, -20)
+    It.Size = UDim2.new(0, 180, 0, 35)
+    It.Position = UDim2.new(0.5, -90, 0.45, -17)
     It.BackgroundColor3 = BG_DARK
     It.BorderSizePixel = 0
     Instance.new("UICorner", It).CornerRadius = UDim.new(0, 6)
@@ -671,17 +663,17 @@ task.spawn(function()
     IS.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     
     local Lb = Instance.new("TextLabel", It)
-    Lb.Size = UDim2.new(1, 0, 0, 16)
-    Lb.Position = UDim2.new(0, 0, 0, 6)
+    Lb.Size = UDim2.new(1, 0, 0, 14)
+    Lb.Position = UDim2.new(0, 0, 0, 5)
     Lb.Text = "INITIALIZING..."
     Lb.TextColor3 = Color3.fromRGB(150, 150, 155)
-    Lb.TextSize = 9
+    Lb.TextSize = 8
     Lb.Font = Enum.Font.GothamBold
     Lb.BackgroundTransparency = 1
     
     local BB = Instance.new("Frame", It)
-    BB.Size = UDim2.new(1, -28, 0, 3)
-    BB.Position = UDim2.new(0, 14, 1, -12)
+    BB.Size = UDim2.new(1, -24, 0, 2)
+    BB.Position = UDim2.new(0, 12, 1, -10)
     BB.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
     BB.BorderSizePixel = 0
     Instance.new("UICorner", BB).CornerRadius = UDim.new(1, 0)
