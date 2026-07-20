@@ -5,7 +5,7 @@ if PG:FindFirstChild("JHubV6") then PG.JHubV6:Destroy() end
 local SL,FaceESP,ActiveBeams,AntiLag,JT,JP,TD=false,false,{},false,nil,false,nil
 local UI=Instance.new("ScreenGui",PG)UI.Name="JHubV6"UI.ResetOnSpawn=false
 
-local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,280),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
+local M=Instance.new("Frame",UI)M.Size,M.Position,M.BackgroundColor3,M.BackgroundTransparency=UDim2.new(0,220,0,320),UDim2.new(0.05,0,0.35,0),Color3.fromRGB(10,10,12),0.15
 M.Active,M.Draggable,M.Visible=true,true,false
 Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
 local S=Instance.new("UIStroke",M)S.Color,S.Thickness=Color3.fromRGB(235,35,75),1.2
@@ -40,13 +40,21 @@ local function CE() for _,i in pairs(ActiveBeams) do pcall(function() i.Beam:Des
 MB("Auto Shiftlock",function(v) SL=v if not v then JP,TD=false,nil end end)
 MB("Direction Facing Esp",function(v) FaceESP=v if not v then CE() end end)
 
--- Anti-Lag System - EXPANDED
+-- Anti-Lag System with PRESETS
 local LagSettings={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true}
 local OriginalStates={}
 local SavedSkybox=nil
 local SavedAtmosphere=nil
 local SavedReflection=nil
 local SavedPostProcessing=nil
+local CurrentPreset="OFF"
+
+local Presets={
+    OFF={Textures=false,Shadows=false,Particles=false,MeshDetail=false,LightingQuality=false,Billboards=false,Skybox=false,Atmosphere=false,Reflections=false,PostProcessing=false},
+    LOW={Textures=true,Shadows=true,Particles=true,MeshDetail=true,LightingQuality=true,Billboards=true,Skybox=true,Atmosphere=true,Reflections=true,PostProcessing=true},
+    MEDIUM={Textures=true,Shadows=false,Particles=true,MeshDetail=true,LightingQuality=false,Billboards=true,Skybox=false,Atmosphere=false,Reflections=true,PostProcessing=true},
+    HIGH={Textures=true,Shadows=false,Particles=false,MeshDetail=true,LightingQuality=false,Billboards=false,Skybox=false,Atmosphere=false,Reflections=false,PostProcessing=false}
+}
 
 local function SaveOriginalState(obj)
     if OriginalStates[obj] then return end
@@ -72,7 +80,7 @@ local function SaveOriginalState(obj)
 end
 
 local function ApplyAntiLag()
-    if not AntiLag then return end
+    if CurrentPreset=="OFF" then return end
     local lighting=game:GetService("Lighting")
 
     if LagSettings.Skybox then
@@ -203,10 +211,52 @@ local function RestoreOriginal()
     OriginalStates={}
 end
 
--- Anti-Lag Toggle with Compact Settings
+local function ApplyPreset(presetName)
+    CurrentPreset=presetName
+    for k,v in pairs(Presets[presetName]) do
+        LagSettings[k]=v
+    end
+    if presetName=="OFF" then
+        RestoreOriginal()
+    else
+        RestoreOriginal()
+        task.wait(0.05)
+        ApplyAntiLag()
+    end
+end
+
+-- Anti-Lag Preset Panel
+local PresetFrame=Instance.new("Frame",M)PresetFrame.Size,PresetFrame.BackgroundColor3,PresetFrame.BorderSizePixel=UDim2.new(1,-20,0,40),Color3.fromRGB(18,18,22),0
+Instance.new("UICorner",PresetFrame).CornerRadius=UDim.new(0,5)
+local PresetTitle=Instance.new("TextLabel",PresetFrame)PresetTitle.Size,PresetTitle.Position,PresetTitle.Text,PresetTitle.TextColor3,PresetTitle.TextSize,PresetTitle.Font,PresetTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"QUALITY PRESET",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
+
+local PresetButtons={}
+local function MakePresetButton(name,xPos,color)
+    local B=Instance.new("TextButton",PresetFrame)B.Size,B.Position,B.Text,B.Font,B.TextSize,B.BackgroundColor3,B.TextColor3=UDim2.new(0,42,0,18),UDim2.new(0,xPos,0,18),name,Enum.Font.GothamBold,7,color,Color3.fromRGB(255,255,255)
+    Instance.new("UICorner",B).CornerRadius=UDim.new(0,3)
+    PresetButtons[name]=B
+    B.MouseButton1Click:Connect(function()
+        for n,btn in pairs(PresetButtons) do
+            btn.BackgroundColor3=n==name and color or Color3.fromRGB(28,28,34)
+            btn.TextColor3=n==name and Color3.fromRGB(255,255,255) or Color3.fromRGB(140,140,145)
+        end
+        ApplyPreset(name)
+    end)
+end
+
+MakePresetButton("OFF",8,Color3.fromRGB(60,60,65))
+MakePresetButton("LOW",54,Color3.fromRGB(235,35,75))
+MakePresetButton("MED",100,Color3.fromRGB(235,120,35))
+MakePresetButton("HIGH",146,Color3.fromRGB(35,180,75))
+
+-- Highlight default OFF button
+PresetButtons["OFF"].BackgroundColor3=Color3.fromRGB(60,60,65)
+PresetButtons["OFF"].TextColor3=Color3.fromRGB(255,255,255)
+
+-- Anti-Lag Toggle with Compact Settings (Custom mode)
 local LagFrame=Instance.new("Frame",M)LagFrame.Size,LagFrame.BackgroundColor3,LagFrame.BorderSizePixel=UDim2.new(1,-20,0,110),Color3.fromRGB(18,18,22),0
 Instance.new("UICorner",LagFrame).CornerRadius=UDim.new(0,5)
-local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"ANTI-LAG",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
+local LagTitle=Instance.new("TextLabel",LagFrame)LagTitle.Size,LagTitle.Position,LagTitle.Text,LagTitle.TextColor3,LagTitle.TextSize,LagTitle.Font,LagTitle.BackgroundTransparency=UDim2.new(1,0,0,12),UDim2.new(0,0,0,2),"CUSTOM SETTINGS",Color3.fromRGB(235,35,75),8,Enum.Font.GothamBold,1
 
 local function LagToggle(name,setting,xPos,yPos)
     local Lb=Instance.new("TextLabel",LagFrame)Lb.Size,Lb.Position,Lb.Text,Lb.TextColor3,Lb.TextSize,Lb.Font,Lb.TextXAlignment,Lb.BackgroundTransparency=UDim2.new(0,70,0,12),UDim2.new(0,xPos,0,yPos),name,Color3.fromRGB(180,180,185),7,Enum.Font.GothamMedium,Enum.TextXAlignment.Left,1
@@ -217,6 +267,11 @@ local function LagToggle(name,setting,xPos,yPos)
         B.Text=LagSettings[setting] and "ON" or "OFF"
         B.BackgroundColor3=LagSettings[setting] and Color3.fromRGB(235,35,75) or Color3.fromRGB(28,28,34)
         B.TextColor3=LagSettings[setting] and Color3.fromRGB(255,255,255) or Color3.fromRGB(140,140,145)
+        CurrentPreset="CUSTOM"
+        for n,btn in pairs(PresetButtons) do
+            btn.BackgroundColor3=Color3.fromRGB(28,28,34)
+            btn.TextColor3=Color3.fromRGB(140,140,145)
+        end
         if AntiLag then
             RestoreOriginal()
             ApplyAntiLag()
@@ -235,18 +290,9 @@ LagToggle("Atmosphere","Atmosphere",110,32)
 LagToggle("Reflections","Reflections",110,48)
 LagToggle("PostFX","PostProcessing",110,64)
 
-MB("Anti Lag",function(v)
-    AntiLag=v
-    if v then
-        ApplyAntiLag()
-    else
-        RestoreOriginal()
-    end
-end)
-
 -- Auto-reapply when new objects spawn
 workspace.DescendantAdded:Connect(function(obj)
-    if not AntiLag then return end
+    if CurrentPreset=="OFF" then return end
     task.wait(0.1)
     pcall(function()
         if obj:IsA("BasePart") and not obj:IsA("Terrain") and LagSettings.Textures then
@@ -269,7 +315,7 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
--- Face ESP - STABLE v2: Use WorldPosition with horizontal facing lock, parent to terrain for clean updates
+-- Face ESP - STABLE v2
 local function IT(p) if p==LP or (LP.Team and p.Team and LP.Team==p.Team) then return true end return false end
 
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -285,11 +331,9 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 b.Attachment0,b.Attachment1,b.Width0,b.Width1,b.Color,b.FaceCamera,b.LightEmission,b.LightInfluence,b.ZOffset,b.Transparency=a0,a1,0.35,0.35,ColorSequence.new(Color3.fromRGB(255,0,0)),true,0.3,0,2,NumberSequence.new(0)
                 d={Beam=b,A0=a0,A1=a1}ActiveBeams[p]=d
             end
-            -- Calculate horizontal facing direction (ignore vertical tilt)
             local lv=torso.CFrame.LookVector
             local f=Vector3.new(lv.X,0,lv.Z).Unit
             if f.Magnitude<0.001 then f=Vector3.new(0,0,-1) end
-            -- Update positions every frame for accuracy
             d.A0.WorldPosition=torso.Position+(f*0.6)
             d.A1.WorldPosition=torso.Position+(f*55)
         elseif ActiveBeams[p] then pcall(function() ActiveBeams[p].Beam:Destroy() ActiveBeams[p].A0:Destroy() ActiveBeams[p].A1:Destroy() end) ActiveBeams[p]=nil end
