@@ -49,7 +49,7 @@ local success, err = pcall(function()
 
     -- Main Frame
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 220) -- slightly taller for the new button
+    M.Size = UDim2.new(0, 220, 0, 210)
     M.Position = UDim2.new(0.05, 0, 0.35, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
@@ -272,35 +272,30 @@ local success, err = pcall(function()
     local function ApplyAntiLag()
         local lighting = game:GetService("Lighting")
         
-        -- Gray sky (remove skybox)
         local sky = lighting:FindFirstChildOfClass("Sky")
         if sky and not SavedSkybox then
             SavedSkybox = sky:Clone()
             sky.Parent = nil
         end
         
-        -- Remove atmosphere
         local atm = lighting:FindFirstChildOfClass("Atmosphere")
         if atm and not SavedAtmosphere then
             SavedAtmosphere = atm:Clone()
             atm.Parent = nil
         end
         
-        -- Remove clouds
         for _, cloud in ipairs(lighting:GetChildren()) do
             if cloud:IsA("Clouds") then
                 pcall(function() cloud.Parent = nil end)
             end
         end
         
-        -- Remove post-processing effects
         for _, effect in ipairs(lighting:GetChildren()) do
             if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
                 pcall(function() effect.Enabled = false end)
             end
         end
         
-        -- Force gray background
         pcall(function()
             lighting.Ambient = Color3.fromRGB(128, 128, 128)
             lighting.Brightness = 2
@@ -309,7 +304,6 @@ local success, err = pcall(function()
             lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
         end)
         
-        -- Save and change lighting tech
         pcall(function()
             if not SavedLightingTech then
                 SavedLightingTech = lighting.Technology
@@ -319,7 +313,6 @@ local success, err = pcall(function()
             lighting.GlobalShadows = false
         end)
         
-        -- Strip all workspace visuals
         for _, obj in ipairs(workspace:GetDescendants()) do
             pcall(function()
                 if obj:IsA("BasePart") and not obj:IsA("Terrain") then
@@ -344,7 +337,6 @@ local success, err = pcall(function()
             end)
         end
         
-        -- Optimize terrain
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -360,19 +352,16 @@ local success, err = pcall(function()
     local function RestoreOriginal()
         local lighting = game:GetService("Lighting")
         
-        -- Restore skybox
         if SavedSkybox then
             pcall(function() SavedSkybox.Parent = lighting end)
             SavedSkybox = nil
         end
         
-        -- Restore atmosphere
         if SavedAtmosphere then
             pcall(function() SavedAtmosphere.Parent = lighting end)
             SavedAtmosphere = nil
         end
         
-        -- Restore lighting
         pcall(function()
             if SavedLightingTech then
                 lighting.Technology = SavedLightingTech
@@ -384,7 +373,6 @@ local success, err = pcall(function()
             end
         end)
         
-        -- Restore all objects
         for obj, state in pairs(OriginalStates) do
             pcall(function()
                 if obj:IsA("BasePart") then
@@ -405,7 +393,6 @@ local success, err = pcall(function()
             end)
         end
         
-        -- Restore terrain
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -420,7 +407,6 @@ local success, err = pcall(function()
         OriginalStates = {}
     end
 
-    -- Anti-Lag Toggle Row
     CreateToggleRow(M, "Anti-Lag", function(v)
         AntiLagEnabled = v
         if v then
@@ -430,23 +416,70 @@ local success, err = pcall(function()
         end
     end)
 
-    -- ==================== LEAD FEET BUTTON ====================
-    local LeadFeetBtn = Instance.new("TextButton")
-    LeadFeetBtn.Size = UDim2.new(1, 0, 0, 30)
-    LeadFeetBtn.BackgroundColor3 = BG_PANEL
-    LeadFeetBtn.Text = "LEAD FEET"
-    LeadFeetBtn.TextColor3 = TEXT_SECONDARY
-    LeadFeetBtn.Font = Enum.Font.GothamMedium
-    LeadFeetBtn.TextSize = 11
-    LeadFeetBtn.AutoButtonColor = false
-    LeadFeetBtn.BorderSizePixel = 0
-    LeadFeetBtn.Parent = M
+    -- ==================== LEAD FEET SYSTEM ====================
+    local LeadFeetEnabled = false
+
+    -- Floating Lead Feet button
+    local LFBtn = Instance.new("TextButton")
+    LFBtn.Size = UDim2.new(0, 90, 0, 36)
+    LFBtn.Position = UDim2.new(0.5, -45, 0.75, 0)
+    LFBtn.Text = "LEAD FEET"
+    LFBtn.TextColor3 = TEXT_PRIMARY
+    LFBtn.Font = Enum.Font.GothamBold
+    LFBtn.TextSize = 11
+    LFBtn.BackgroundColor3 = BG_DARK
+    LFBtn.Visible = false
+    LFBtn.AutoButtonColor = false
+    LFBtn.BorderSizePixel = 0
+    LFBtn.Active = true
+    LFBtn.Parent = UI
 
     local lfCorner = Instance.new("UICorner")
-    lfCorner.CornerRadius = UDim.new(0, 5)
-    lfCorner.Parent = LeadFeetBtn
+    lfCorner.CornerRadius = UDim.new(0, 6)
+    lfCorner.Parent = LFBtn
 
-    LeadFeetBtn.MouseButton1Click:Connect(function()
+    local lfStroke = Instance.new("UIStroke")
+    lfStroke.Color = ACCENT
+    lfStroke.Thickness = 1.4
+    lfStroke.Parent = LFBtn
+
+    -- Make the floating button draggable
+    local draggingLF = false
+    local dragStartLF, startPosLF
+
+    LFBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingLF = true
+            dragStartLF = input.Position
+            startPosLF = LFBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingLF = false
+                end
+            end)
+        end
+    end)
+
+    LFBtn.InputChanged:Connect(function(input)
+        if draggingLF and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStartLF
+            local vs = C.ViewportSize
+            local newX = math.clamp(startPosLF.X.Offset + delta.X, 0, vs.X - LFBtn.AbsoluteSize.X)
+            local newY = math.clamp(startPosLF.Y.Offset + delta.Y, 0, vs.Y - LFBtn.AbsoluteSize.Y)
+            LFBtn.Position = UDim2.new(0, newX, 0, newY)
+        end
+    end)
+
+    -- Keep floating button on screen when resizing
+    C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+        local vs = C.ViewportSize
+        local newX = math.clamp(LFBtn.AbsolutePosition.X, 0, vs.X - LFBtn.AbsoluteSize.X)
+        local newY = math.clamp(LFBtn.AbsolutePosition.Y, 0, vs.Y - LFBtn.AbsoluteSize.Y)
+        LFBtn.Position = UDim2.new(0, newX, 0, newY)
+    end)
+
+    -- Lead Feet activation function
+    local function ActivateLeadFeet()
         local char = LP.Character
         if not char then return end
         
@@ -454,7 +487,6 @@ local success, err = pcall(function()
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         if not hrp or not humanoid or humanoid.Health <= 0 then return end
         
-        -- Only work if airborne
         local state = humanoid:GetState()
         if state ~= Enum.HumanoidStateType.Freefall and 
            state ~= Enum.HumanoidStateType.Jumping and
@@ -462,7 +494,6 @@ local success, err = pcall(function()
             return
         end
         
-        -- Raycast straight down to find the floor
         local params = RaycastParams.new()
         params.FilterDescendantsInstances = {char}
         params.FilterType = Enum.RaycastFilterType.Exclude
@@ -470,14 +501,20 @@ local success, err = pcall(function()
         local result = workspace:Raycast(hrp.Position, Vector3.new(0, -200, 0), params)
         
         if result then
-            -- Snap to ground (slightly above so you don't clip)
             hrp.CFrame = CFrame.new(result.Position + Vector3.new(0, 3, 0)) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
             hrp.AssemblyLinearVelocity = Vector3.zero
             humanoid:ChangeState(Enum.HumanoidStateType.Landed)
         else
-            -- Fallback if no floor found (very high up)
             hrp.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
         end
+    end
+
+    LFBtn.MouseButton1Click:Connect(ActivateLeadFeet)
+
+    -- Toggle that shows/hides the floating button
+    CreateToggleRow(M, "Lead Feet", function(v)
+        LeadFeetEnabled = v
+        LFBtn.Visible = v
     end)
     -- ==========================================================
 
