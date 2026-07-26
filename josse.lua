@@ -478,7 +478,7 @@ local success, err = pcall(function()
         LFBtn.Position = UDim2.new(0, newX, 0, newY)
     end)
 
-    -- Lead Feet activation function
+    -- Lead Feet activation function (smooth version)
     local function ActivateLeadFeet()
         local char = LP.Character
         if not char then return end
@@ -501,11 +501,30 @@ local success, err = pcall(function()
         local result = workspace:Raycast(hrp.Position, Vector3.new(0, -200, 0), params)
         
         if result then
-            hrp.CFrame = CFrame.new(result.Position + Vector3.new(0, 3, 0)) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
+            local targetPos = result.Position + Vector3.new(0, 3, 0)
+            local targetCFrame = CFrame.new(targetPos) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
+            
+            -- Smooth fast drop
+            local tweenInfo = TweenInfo.new(
+                0.12,
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            )
+            
+            local tween = TweenService:Create(hrp, tweenInfo, {
+                CFrame = targetCFrame
+            })
+            
             hrp.AssemblyLinearVelocity = Vector3.zero
-            humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            
+            tween:Play()
+            
+            tween.Completed:Connect(function()
+                humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+            end)
         else
-            hrp.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -180, 0)
         end
     end
 
