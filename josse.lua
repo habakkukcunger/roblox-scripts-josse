@@ -49,7 +49,7 @@ local success, err = pcall(function()
 
     -- Main Frame
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 180)
+    M.Size = UDim2.new(0, 220, 0, 220) -- slightly taller for the new button
     M.Position = UDim2.new(0.05, 0, 0.35, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
@@ -429,6 +429,57 @@ local success, err = pcall(function()
             RestoreOriginal()
         end
     end)
+
+    -- ==================== LEAD FEET BUTTON ====================
+    local LeadFeetBtn = Instance.new("TextButton")
+    LeadFeetBtn.Size = UDim2.new(1, 0, 0, 30)
+    LeadFeetBtn.BackgroundColor3 = BG_PANEL
+    LeadFeetBtn.Text = "LEAD FEET"
+    LeadFeetBtn.TextColor3 = TEXT_SECONDARY
+    LeadFeetBtn.Font = Enum.Font.GothamMedium
+    LeadFeetBtn.TextSize = 11
+    LeadFeetBtn.AutoButtonColor = false
+    LeadFeetBtn.BorderSizePixel = 0
+    LeadFeetBtn.Parent = M
+
+    local lfCorner = Instance.new("UICorner")
+    lfCorner.CornerRadius = UDim.new(0, 5)
+    lfCorner.Parent = LeadFeetBtn
+
+    LeadFeetBtn.MouseButton1Click:Connect(function()
+        local char = LP.Character
+        if not char then return end
+        
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not humanoid or humanoid.Health <= 0 then return end
+        
+        -- Only work if airborne
+        local state = humanoid:GetState()
+        if state ~= Enum.HumanoidStateType.Freefall and 
+           state ~= Enum.HumanoidStateType.Jumping and
+           state ~= Enum.HumanoidStateType.FallingDown then
+            return
+        end
+        
+        -- Raycast straight down to find the floor
+        local params = RaycastParams.new()
+        params.FilterDescendantsInstances = {char}
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        
+        local result = workspace:Raycast(hrp.Position, Vector3.new(0, -200, 0), params)
+        
+        if result then
+            -- Snap to ground (slightly above so you don't clip)
+            hrp.CFrame = CFrame.new(result.Position + Vector3.new(0, 3, 0)) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+        else
+            -- Fallback if no floor found (very high up)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
+        end
+    end)
+    -- ==========================================================
 
     -- Auto-reapply for new objects
     workspace.DescendantAdded:Connect(function(obj)
