@@ -537,108 +537,78 @@ local success, err = pcall(function()
     end)
     -- ==========================================================
 
-    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS) ====================
+    -- ==================== INF LUCKY SPINS SYSTEM (HOOK-FREE - SAFE) ====================
     local InfSpinsEnabled = false
     local SpinTask = nil
-    local LastSpinRemote = nil
-    local LastSpinArgs = nil
-    local SpyInstalled = false
-    local OldNamecall = nil
 
-    -- Natural human-like claim pace (randomized so it looks normal, not like spam)
+    -- Natural human-like claim pace
     local MIN_CLAIM_DELAY = 2.5
     local MAX_CLAIM_DELAY = 4.5
 
-    local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest", "claim", "reward", "rank", "redeem", "prize"}
+    local CLAIM_KEYWORDS = {"claim", "reward", "rank", "redeem", "prize", "spin", "lucky", "wheel"}
 
-    -- Lightweight spy: installed ONLY while the toggle is ON so it never freezes the client
-    local function InstallSpy()
-        if SpyInstalled then return end
-        pcall(function()
-            if not hookmetamethod or not getnamecallmethod or not newcclosure then return end
-            OldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
-                local self = ...
-                local method = getnamecallmethod()
-                -- Fast path: only react to server calls, everything else passes through instantly
-                if method == "FireServer" or method == "InvokeServer" then
-                    if typeof(self) == "Instance" then
-                        local n = string.lower(self.Name)
-                        for _, kw in ipairs(SPIN_KEYWORDS) do
-                            if string.find(n, kw, 1, true) then
-                                LastSpinRemote = self
-                                LastSpinArgs = {select(2, ...)}
-                                print("[JHubV6 SPY] Captured " .. self:GetFullName())
-                                break
-                            end
-                        end
+    local function NameMatches(obj)
+        local n = string.lower(obj.Name)
+        for _, kw in ipairs(CLAIM_KEYWORDS) do
+            if string.find(n, kw, 1, true) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function FindClaimRemote()
+        local rs = game:GetService("ReplicatedStorage")
+        -- Prefer remotes inside common remote folders
+        for _, name in ipairs({"Remotes", "Remote", "RemoteEvents", "RemoteFunctions", "Network"}) do
+            local c = rs:FindFirstChild(name)
+            if c then
+                for _, obj in ipairs(c:GetDescendants()) do
+                    if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and NameMatches(obj) then
+                        return obj
                     end
                 end
-                return OldNamecall(...)
-            end))
-            SpyInstalled = true
-        end)
-    end
-
-    local function UninstallSpy()
-        if not SpyInstalled then return end
-        pcall(function()
-            if OldNamecall and hookmetamethod then
-                hookmetamethod(game, "__namecall", OldNamecall)
             end
-        end)
-        SpyInstalled = false
-        OldNamecall = nil
-    end
-
-    local function FindSpinRemote()
+        end
+        -- Fallback: search the whole game
         for _, obj in ipairs(game:GetDescendants()) do
-            if not (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then continue end
-            local n = string.lower(obj.Name)
-            for _, kw in ipairs(SPIN_KEYWORDS) do
-                if string.find(n, kw, 1, true) then
-                    return obj
-                end
+            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and NameMatches(obj) then
+                return obj
             end
         end
         return nil
     end
 
     local function DoClaim()
-        local remote = LastSpinRemote or FindSpinRemote()
+        local remote = FindClaimRemote()
         if not remote then return end
         pcall(function()
-            if LastSpinArgs and #LastSpinArgs > 0 then
-                if remote:IsA("RemoteFunction") then
-                    remote:InvokeServer(unpack(LastSpinArgs))
-                else
-                    remote:FireServer(unpack(LastSpinArgs))
-                end
+            if remote:IsA("RemoteFunction") then
+                remote:InvokeServer()
             else
-                if remote:IsA("RemoteFunction") then
-                    remote:InvokeServer()
-                else
-                    remote:FireServer()
-                end
+                remote:FireServer()
             end
         end)
     end
 
-    -- Re-claims the reward forever at a normal pace, even if the game marks it as "claimed"
+    -- Re-claims forever at a normal pace. No hooks, so the game's own spins are untouched.
     local function ClaimLoop()
         while InfSpinsEnabled do
             task.wait(MIN_CLAIM_DELAY + math.random() * (MAX_CLAIM_DELAY - MIN_CLAIM_DELAY))
-            if LastSpinRemote then
-                DoClaim()
-            end
+            pcall(DoClaim)
         end
     end
 
     CreateToggleRow(M, "Inf Lucky Spins", function(v)
         InfSpinsEnabled = v
         if v then
-            InstallSpy()
+            local r = FindClaimRemote()
+            if r then
+                print("[JHubV6] Found reward remote: " .. r:GetFullName() .. " (" .. r.ClassName .. ")")
+            else
+                print("[JHubV6] No remote matched keywords: claim, reward, rank, redeem, prize, spin, lucky, wheel")
+            end
             if not SpinTask then
-                print("[JHubV6] Claim the rank reward ONCE manually so the spy captures it, then it keeps re-claiming automatically every few seconds")
                 SpinTask = task.spawn(ClaimLoop)
             end
         else
@@ -646,7 +616,6 @@ local success, err = pcall(function()
                 task.cancel(SpinTask)
                 SpinTask = nil
             end
-            UninstallSpy()
         end
     end)
     -- ============================================================
