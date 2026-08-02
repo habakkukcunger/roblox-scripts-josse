@@ -537,13 +537,17 @@ local success, err = pcall(function()
     end)
     -- ==========================================================
 
-    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS - FIXED) ====================
+    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS) ====================
     local InfSpinsEnabled = false
     local SpinTask = nil
     local LastSpinRemote = nil
     local LastSpinArgs = nil
     local SpyInstalled = false
     local OldNamecall = nil
+
+    -- Natural human-like claim pace (randomized so it looks normal, not like spam)
+    local MIN_CLAIM_DELAY = 2.5
+    local MAX_CLAIM_DELAY = 4.5
 
     local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest", "claim", "reward", "rank", "redeem", "prize"}
 
@@ -599,7 +603,7 @@ local success, err = pcall(function()
         return nil
     end
 
-    local function DoSpin()
+    local function DoClaim()
         local remote = LastSpinRemote or FindSpinRemote()
         if not remote then return end
         pcall(function()
@@ -619,11 +623,12 @@ local success, err = pcall(function()
         end)
     end
 
-    local function SpinLoop()
+    -- Re-claims the reward forever at a normal pace, even if the game marks it as "claimed"
+    local function ClaimLoop()
         while InfSpinsEnabled do
-            task.wait(0.6)
+            task.wait(MIN_CLAIM_DELAY + math.random() * (MAX_CLAIM_DELAY - MIN_CLAIM_DELAY))
             if LastSpinRemote then
-                DoSpin()
+                DoClaim()
             end
         end
     end
@@ -633,8 +638,8 @@ local success, err = pcall(function()
         if v then
             InstallSpy()
             if not SpinTask then
-                print("[JHubV6] Claim your rank reward ONCE manually so the spy captures it, then it auto-redeems every 0.6s")
-                SpinTask = task.spawn(SpinLoop)
+                print("[JHubV6] Claim the rank reward ONCE manually so the spy captures it, then it keeps re-claiming automatically every few seconds")
+                SpinTask = task.spawn(ClaimLoop)
             end
         else
             if SpinTask then
