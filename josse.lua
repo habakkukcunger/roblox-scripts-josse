@@ -49,7 +49,7 @@ local success, err = pcall(function()
 
     -- Main Frame
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 246)  -- [CHANGED] 210 -> 246 to fit 5th toggle
+    M.Size = UDim2.new(0, 220, 0, 246)
     M.Position = UDim2.new(0.05, 0, 0.35, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
@@ -537,29 +537,33 @@ local success, err = pcall(function()
     end)
     -- ==========================================================
 
-    -- ==================== INF LUCKY SPINS SYSTEM [NEW] ====================
+    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS) ====================
     local InfSpinsEnabled = false
     local SpinTask = nil
+    local LastSpinRemote = nil
     local LastSpinArgs = nil
 
-    local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest"}
+    local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest", "claim", "reward", "rank", "redeem", "prize"}
 
-    -- Captures the exact args when you manually press spin once,
-    -- so it can replay them automatically (executor-dependent, safe fallback)
+    -- Remote spy: captures the remote + exact args when you claim the reward manually
     pcall(function()
         if not hookmetamethod or not getnamecallmethod then return end
         local OldNC = hookmetamethod(game, "__namecall", newcclosure(function(...)
             local self = ...
-            local method = getnamecallmethod()
-            if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
-                local n = string.lower(self.Name)
-                for _, kw in ipairs(SPIN_KEYWORDS) do
-                    if string.find(n, kw, 1, true) then
-                        LastSpinArgs = {select(2, ...)}
-                        break
+            pcall(function(...)
+                local method = getnamecallmethod()
+                if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
+                    local n = string.lower(self.Name)
+                    for _, kw in ipairs(SPIN_KEYWORDS) do
+                        if string.find(n, kw, 1, true) then
+                            LastSpinRemote = self
+                            LastSpinArgs = {select(2, ...)}
+                            print("[JHubV6 SPY] Captured " .. self:GetFullName())
+                            break
+                        end
                     end
                 end
-            end
+            end, ...)
             return OldNC(...)
         end))
     end)
@@ -578,7 +582,7 @@ local success, err = pcall(function()
     end
 
     local function DoSpin()
-        local remote = FindSpinRemote()
+        local remote = LastSpinRemote or FindSpinRemote()
         if not remote then return end
         if LastSpinArgs and #LastSpinArgs > 0 then
             if remote:IsA("RemoteFunction") then
@@ -598,14 +602,19 @@ local success, err = pcall(function()
     local function SpinLoop()
         while InfSpinsEnabled do
             task.wait(0.6)
-            pcall(DoSpin)
+            if LastSpinRemote then
+                pcall(DoSpin)
+            end
         end
     end
 
     CreateToggleRow(M, "Inf Lucky Spins", function(v)
         InfSpinsEnabled = v
         if v then
-            if not SpinTask then SpinTask = task.spawn(SpinLoop) end
+            if not SpinTask then
+                print("[JHubV6] Claim your rank reward ONCE manually so the spy captures it, then it auto-redeems every 0.6s")
+                SpinTask = task.spawn(SpinLoop)
+            end
         else
             if SpinTask then
                 task.cancel(SpinTask)
