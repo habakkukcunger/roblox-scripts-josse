@@ -49,7 +49,7 @@ local success, err = pcall(function()
 
     -- Main Frame
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 210)
+    M.Size = UDim2.new(0, 220, 0, 246)  -- [CHANGED] 210 -> 246 to fit 5th toggle
     M.Position = UDim2.new(0.05, 0, 0.35, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
@@ -536,6 +536,84 @@ local success, err = pcall(function()
         LFBtn.Visible = v
     end)
     -- ==========================================================
+
+    -- ==================== INF LUCKY SPINS SYSTEM [NEW] ====================
+    local InfSpinsEnabled = false
+    local SpinTask = nil
+    local LastSpinArgs = nil
+
+    local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest"}
+
+    -- Captures the exact args when you manually press spin once,
+    -- so it can replay them automatically (executor-dependent, safe fallback)
+    pcall(function()
+        if not hookmetamethod or not getnamecallmethod then return end
+        local OldNC = hookmetamethod(game, "__namecall", newcclosure(function(...)
+            local self = ...
+            local method = getnamecallmethod()
+            if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
+                local n = string.lower(self.Name)
+                for _, kw in ipairs(SPIN_KEYWORDS) do
+                    if string.find(n, kw, 1, true) then
+                        LastSpinArgs = {select(2, ...)}
+                        break
+                    end
+                end
+            end
+            return OldNC(...)
+        end))
+    end)
+
+    local function FindSpinRemote()
+        for _, obj in ipairs(game:GetDescendants()) do
+            if not (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then continue end
+            local n = string.lower(obj.Name)
+            for _, kw in ipairs(SPIN_KEYWORDS) do
+                if string.find(n, kw, 1, true) then
+                    return obj
+                end
+            end
+        end
+        return nil
+    end
+
+    local function DoSpin()
+        local remote = FindSpinRemote()
+        if not remote then return end
+        if LastSpinArgs and #LastSpinArgs > 0 then
+            if remote:IsA("RemoteFunction") then
+                remote:InvokeServer(unpack(LastSpinArgs))
+            else
+                remote:FireServer(unpack(LastSpinArgs))
+            end
+        else
+            if remote:IsA("RemoteFunction") then
+                remote:InvokeServer()
+            else
+                remote:FireServer()
+            end
+        end
+    end
+
+    local function SpinLoop()
+        while InfSpinsEnabled do
+            task.wait(0.6)
+            pcall(DoSpin)
+        end
+    end
+
+    CreateToggleRow(M, "Inf Lucky Spins", function(v)
+        InfSpinsEnabled = v
+        if v then
+            if not SpinTask then SpinTask = task.spawn(SpinLoop) end
+        else
+            if SpinTask then
+                task.cancel(SpinTask)
+                SpinTask = nil
+            end
+        end
+    end)
+    -- ============================================================
 
     -- Auto-reapply for new objects
     workspace.DescendantAdded:Connect(function(obj)
