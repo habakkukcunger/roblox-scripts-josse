@@ -537,36 +537,54 @@ local success, err = pcall(function()
     end)
     -- ==========================================================
 
-    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS) ====================
+    -- ==================== INF LUCKY SPINS SYSTEM (RANK REWARD BYPASS - FIXED) ====================
     local InfSpinsEnabled = false
     local SpinTask = nil
     local LastSpinRemote = nil
     local LastSpinArgs = nil
+    local SpyInstalled = false
+    local OldNamecall = nil
 
     local SPIN_KEYWORDS = {"spin", "lucky", "wheel", "gacha", "roll", "crate", "chest", "claim", "reward", "rank", "redeem", "prize"}
 
-    -- Remote spy: captures the remote + exact args when you claim the reward manually
-    pcall(function()
-        if not hookmetamethod or not getnamecallmethod then return end
-        local OldNC = hookmetamethod(game, "__namecall", newcclosure(function(...)
-            local self = ...
-            pcall(function(...)
+    -- Lightweight spy: installed ONLY while the toggle is ON so it never freezes the client
+    local function InstallSpy()
+        if SpyInstalled then return end
+        pcall(function()
+            if not hookmetamethod or not getnamecallmethod or not newcclosure then return end
+            OldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
+                local self = ...
                 local method = getnamecallmethod()
-                if (method == "FireServer" or method == "InvokeServer") and typeof(self) == "Instance" then
-                    local n = string.lower(self.Name)
-                    for _, kw in ipairs(SPIN_KEYWORDS) do
-                        if string.find(n, kw, 1, true) then
-                            LastSpinRemote = self
-                            LastSpinArgs = {select(2, ...)}
-                            print("[JHubV6 SPY] Captured " .. self:GetFullName())
-                            break
+                -- Fast path: only react to server calls, everything else passes through instantly
+                if method == "FireServer" or method == "InvokeServer" then
+                    if typeof(self) == "Instance" then
+                        local n = string.lower(self.Name)
+                        for _, kw in ipairs(SPIN_KEYWORDS) do
+                            if string.find(n, kw, 1, true) then
+                                LastSpinRemote = self
+                                LastSpinArgs = {select(2, ...)}
+                                print("[JHubV6 SPY] Captured " .. self:GetFullName())
+                                break
+                            end
                         end
                     end
                 end
-            end, ...)
-            return OldNC(...)
-        end))
-    end)
+                return OldNamecall(...)
+            end))
+            SpyInstalled = true
+        end)
+    end
+
+    local function UninstallSpy()
+        if not SpyInstalled then return end
+        pcall(function()
+            if OldNamecall and hookmetamethod then
+                hookmetamethod(game, "__namecall", OldNamecall)
+            end
+        end)
+        SpyInstalled = false
+        OldNamecall = nil
+    end
 
     local function FindSpinRemote()
         for _, obj in ipairs(game:GetDescendants()) do
@@ -584,26 +602,28 @@ local success, err = pcall(function()
     local function DoSpin()
         local remote = LastSpinRemote or FindSpinRemote()
         if not remote then return end
-        if LastSpinArgs and #LastSpinArgs > 0 then
-            if remote:IsA("RemoteFunction") then
-                remote:InvokeServer(unpack(LastSpinArgs))
+        pcall(function()
+            if LastSpinArgs and #LastSpinArgs > 0 then
+                if remote:IsA("RemoteFunction") then
+                    remote:InvokeServer(unpack(LastSpinArgs))
+                else
+                    remote:FireServer(unpack(LastSpinArgs))
+                end
             else
-                remote:FireServer(unpack(LastSpinArgs))
+                if remote:IsA("RemoteFunction") then
+                    remote:InvokeServer()
+                else
+                    remote:FireServer()
+                end
             end
-        else
-            if remote:IsA("RemoteFunction") then
-                remote:InvokeServer()
-            else
-                remote:FireServer()
-            end
-        end
+        end)
     end
 
     local function SpinLoop()
         while InfSpinsEnabled do
             task.wait(0.6)
             if LastSpinRemote then
-                pcall(DoSpin)
+                DoSpin()
             end
         end
     end
@@ -611,6 +631,7 @@ local success, err = pcall(function()
     CreateToggleRow(M, "Inf Lucky Spins", function(v)
         InfSpinsEnabled = v
         if v then
+            InstallSpy()
             if not SpinTask then
                 print("[JHubV6] Claim your rank reward ONCE manually so the spy captures it, then it auto-redeems every 0.6s")
                 SpinTask = task.spawn(SpinLoop)
@@ -620,6 +641,7 @@ local success, err = pcall(function()
                 task.cancel(SpinTask)
                 SpinTask = nil
             end
+            UninstallSpy()
         end
     end)
     -- ============================================================
