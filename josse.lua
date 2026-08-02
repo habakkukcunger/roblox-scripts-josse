@@ -49,7 +49,7 @@ local success, err = pcall(function()
 
     -- Main Frame
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 246)
+    M.Size = UDim2.new(0, 220, 0, 210)
     M.Position = UDim2.new(0.05, 0, 0.35, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
@@ -536,89 +536,6 @@ local success, err = pcall(function()
         LFBtn.Visible = v
     end)
     -- ==========================================================
-
-    -- ==================== INF LUCKY SPINS SYSTEM (HOOK-FREE - SAFE) ====================
-    local InfSpinsEnabled = false
-    local SpinTask = nil
-
-    -- Natural human-like claim pace
-    local MIN_CLAIM_DELAY = 2.5
-    local MAX_CLAIM_DELAY = 4.5
-
-    local CLAIM_KEYWORDS = {"claim", "reward", "rank", "redeem", "prize", "spin", "lucky", "wheel"}
-
-    local function NameMatches(obj)
-        local n = string.lower(obj.Name)
-        for _, kw in ipairs(CLAIM_KEYWORDS) do
-            if string.find(n, kw, 1, true) then
-                return true
-            end
-        end
-        return false
-    end
-
-    local function FindClaimRemote()
-        local rs = game:GetService("ReplicatedStorage")
-        -- Prefer remotes inside common remote folders
-        for _, name in ipairs({"Remotes", "Remote", "RemoteEvents", "RemoteFunctions", "Network"}) do
-            local c = rs:FindFirstChild(name)
-            if c then
-                for _, obj in ipairs(c:GetDescendants()) do
-                    if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and NameMatches(obj) then
-                        return obj
-                    end
-                end
-            end
-        end
-        -- Fallback: search the whole game
-        for _, obj in ipairs(game:GetDescendants()) do
-            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and NameMatches(obj) then
-                return obj
-            end
-        end
-        return nil
-    end
-
-    local function DoClaim()
-        local remote = FindClaimRemote()
-        if not remote then return end
-        pcall(function()
-            if remote:IsA("RemoteFunction") then
-                remote:InvokeServer()
-            else
-                remote:FireServer()
-            end
-        end)
-    end
-
-    -- Re-claims forever at a normal pace. No hooks, so the game's own spins are untouched.
-    local function ClaimLoop()
-        while InfSpinsEnabled do
-            task.wait(MIN_CLAIM_DELAY + math.random() * (MAX_CLAIM_DELAY - MIN_CLAIM_DELAY))
-            pcall(DoClaim)
-        end
-    end
-
-    CreateToggleRow(M, "Inf Lucky Spins", function(v)
-        InfSpinsEnabled = v
-        if v then
-            local r = FindClaimRemote()
-            if r then
-                print("[JHubV6] Found reward remote: " .. r:GetFullName() .. " (" .. r.ClassName .. ")")
-            else
-                print("[JHubV6] No remote matched keywords: claim, reward, rank, redeem, prize, spin, lucky, wheel")
-            end
-            if not SpinTask then
-                SpinTask = task.spawn(ClaimLoop)
-            end
-        else
-            if SpinTask then
-                task.cancel(SpinTask)
-                SpinTask = nil
-            end
-        end
-    end)
-    -- ============================================================
 
     -- Auto-reapply for new objects
     workspace.DescendantAdded:Connect(function(obj)
