@@ -1,28 +1,28 @@
--- Roblox Volleyball Legends - True Desync (Movement Fix)
--- Now preserves your movement while delaying avatar position for others
+-- Roblox Volleyball Legends - ALTERNATIVE DESYNC METHOD
+-- This uses position interpolation + replication delay
+-- Works by forcing the server to accept client-side prediction with a delay buffer
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Configuration
 local DELAY_SECONDS = 1.5
-local UPDATE_INTERVAL = 0.05
+local UPDATE_INTERVAL = 0.03
 
 -- State
 local state = {
     active = false,
     positionHistory = {},
-    maxHistory = math.floor(DELAY_SECONDS / UPDATE_INTERVAL) + 15,
+    maxHistory = math.floor(DELAY_SECONDS / UPDATE_INTERVAL) + 30,
     lastUpdate = 0,
     ghostParts = {},
     ghostEnabled = false,
-    originalCFrame = nil,
-    isMoving = false
+    fakeCFrame = nil,
+    frameCounter = 0
 }
 
--- ========== GHOST CREATION ==========
+-- ========== GHOST ==========
 local function createGhostFigure()
     for _, part in pairs(state.ghostParts) do
         pcall(function() part:Destroy() end)
@@ -31,7 +31,6 @@ local function createGhostFigure()
     
     local character = LocalPlayer.Character
     if not character then return end
-    
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
     
@@ -45,8 +44,8 @@ local function createGhostFigure()
     body.Shape = Enum.PartType.Block
     body.Anchored = true
     body.CanCollide = false
-    body.Transparency = 0.35
-    body.BrickColor = BrickColor.new("Bright blue")
+    body.Transparency = 0.3
+    body.BrickColor = BrickColor.new("Bright red")
     body.Material = Enum.Material.Neon
     body.CFrame = rootPart.CFrame
     body.Parent = ghostGroup
@@ -57,40 +56,40 @@ local function createGhostFigure()
     head.Shape = Enum.PartType.Ball
     head.Anchored = true
     head.CanCollide = false
-    head.Transparency = 0.3
-    head.BrickColor = BrickColor.new("Bright blue")
+    head.Transparency = 0.25
+    head.BrickColor = BrickColor.new("Bright red")
     head.Material = Enum.Material.Neon
     head.CFrame = rootPart.CFrame * CFrame.new(0, 2.6, 0)
     head.Parent = ghostGroup
     
     local selBox = Instance.new("SelectionBox")
     selBox.Adornee = body
-    selBox.Color3 = Color3.fromRGB(0, 150, 255)
-    selBox.LineThickness = 0.06
-    selBox.Transparency = 0.3
+    selBox.Color3 = Color3.fromRGB(255, 50, 50)
+    selBox.LineThickness = 0.08
+    selBox.Transparency = 0.2
     selBox.Parent = body
     
     local light = Instance.new("PointLight")
-    light.Range = 12
-    light.Brightness = 3
-    light.Color = Color3.fromRGB(0, 150, 255)
+    light.Range = 15
+    light.Brightness = 4
+    light.Color = Color3.fromRGB(255, 0, 0)
     light.Parent = body
     
     local billboard = Instance.new("BillboardGui")
-    billboard.Size = UDim2.new(0, 140, 0, 30)
+    billboard.Size = UDim2.new(0, 180, 0, 35)
     billboard.Adornee = head
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.Parent = head
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = "🔵 OTHERS SEE YOU HERE"
-    label.TextColor3 = Color3.fromRGB(100, 200, 255)
-    label.TextSize = 13
+    label.Text = "🔴 DESYNC POSITION"
+    label.TextColor3 = Color3.fromRGB(255, 100, 100)
+    label.TextSize = 14
     label.Font = Enum.Font.GothamBold
     label.TextStrokeTransparency = 0.2
-    label.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
+    label.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
     label.Parent = billboard
     
     state.ghostParts = {
@@ -102,7 +101,6 @@ local function createGhostFigure()
         label = label,
         group = ghostGroup
     }
-    
     return ghostGroup
 end
 
@@ -133,17 +131,17 @@ local function setGhostVisible(visible)
     end
 end
 
--- ========== RECORD POSITION (DOES NOT AFFECT MOVEMENT) ==========
+-- ========== RECORD POSITION ==========
 local function recordPosition()
     local character = LocalPlayer.Character
     if not character then return end
-    
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
     
     table.insert(state.positionHistory, {
         cframe = rootPart.CFrame,
         velocity = rootPart.Velocity,
+        position = rootPart.Position,
         time = tick()
     })
     
@@ -153,8 +151,7 @@ local function recordPosition()
 end
 
 local function getDelayedPosition()
-    if #state.positionHistory == 0 then return nil end
-    
+    if #state.positionHistory < 5 then return nil end
     local targetTime = tick() - DELAY_SECONDS
     local closest = nil
     local closestDiff = math.huge
@@ -166,53 +163,159 @@ local function getDelayedPosition()
             closest = entry
         end
     end
-    
     return closest
 end
 
--- ========== APPLY DESYNC (NON-INTRUSIVE VERSION) ==========
-local function applyDesync()
-    local delayed = getDelayedPosition()
-    if not delayed then return end
-    
+-- ========== ALTERNATIVE DESYNC METHOD ==========
+-- This method actually moves the ghost and sends fake position data
+-- without affecting your actual movement
+
+local function applyDesyncAlternative()
     local character = LocalPlayer.Character
     if not character then return end
-    
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
     
-    -- Update ghost to show delayed position
+    local delayed = getDelayedPosition()
+    if not delayed then return end
+    
+    -- Update ghost to show where others see you
     if state.ghostEnabled then
         updateGhost(delayed.cframe)
     end
     
-    -- IMPORTANT: Do NOT modify rootPart.CFrame directly
-    -- Instead, use network ownership + velocity spoofing
-    -- This preserves client-side movement
+    -- KEY METHOD: Force the server to accept a different position
+    -- by temporarily setting position, then reverting
+    -- The server remembers the fake position due to network lag
     
     pcall(function()
-        -- Take ownership to send data
+        -- Take full ownership
         if rootPart:GetNetworkOwner() ~= LocalPlayer then
             rootPart:SetNetworkOwner(LocalPlayer)
         end
         
-        -- Spoof velocity to match delayed position's velocity
-        -- This tricks the server into thinking you're moving differently
+        -- Store real values
+        local realPos = rootPart.Position
+        local realVel = rootPart.Velocity
+        local realCF = rootPart.CFrame
+        
+        -- Apply delayed position to server
+        rootPart.CFrame = delayed.cframe
+        rootPart.Velocity = delayed.velocity
+        
+        -- Force network flush
+        rootPart:SetNetworkOwner(LocalPlayer)
+        
+        -- Revert client-side instantly (server still sees the fake)
+        task.spawn(function()
+            wait(0.016) -- one frame
+            if rootPart and rootPart.Parent then
+                rootPart.CFrame = realCF
+                rootPart.Velocity = realVel
+                rootPart:SetNetworkOwner(LocalPlayer)
+            end
+        end)
+    end)
+end
+
+-- ========== SECOND METHOD: VELOCITY INTERPOLATION ==========
+-- This method continuously sends slightly delayed velocity data
+-- Making the server think you're reacting slower than you are
+
+local function applyVelocityDesync()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local delayed = getDelayedPosition()
+    if not delayed then return end
+    
+    if state.ghostEnabled then
+        updateGhost(delayed.cframe)
+    end
+    
+    pcall(function()
+        if rootPart:GetNetworkOwner() ~= LocalPlayer then
+            rootPart:SetNetworkOwner(LocalPlayer)
+        end
+        
+        -- Send velocity that's offset by delay
+        -- This makes server think you're still moving from old position
         local currentVel = rootPart.Velocity
         local delayedVel = delayed.velocity
         
-        -- Mix real and delayed velocity slightly
-        local mixedVel = currentVel * 0.3 + delayedVel * 0.7
+        -- Mix velocities - higher delayed = more desync
+        local mixedVel = currentVel * 0.2 + delayedVel * 0.8
+        
+        -- Apply to server
         rootPart.Velocity = mixedVel
         
-        -- Reset velocity after short delay (client only)
+        -- Revert quickly
         task.spawn(function()
-            wait(0.03)
+            wait(0.02)
             if rootPart and rootPart.Parent then
                 rootPart.Velocity = currentVel
             end
         end)
     end)
+end
+
+-- ========== THIRD METHOD: POSITION OFFSET ==========
+-- Sends a position that is slightly offset from reality
+-- Creates a rubber-banding effect for other players
+
+local offsetAmount = 0
+local function applyOffsetDesync()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local delayed = getDelayedPosition()
+    if not delayed then return end
+    
+    if state.ghostEnabled then
+        updateGhost(delayed.cframe)
+    end
+    
+    pcall(function()
+        if rootPart:GetNetworkOwner() ~= LocalPlayer then
+            rootPart:SetNetworkOwner(LocalPlayer)
+        end
+        
+        -- Create a random offset that changes slowly
+        offsetAmount = offsetAmount + (math.random(-2, 2) * 0.1)
+        offsetAmount = math.clamp(offsetAmount, -3, 3)
+        
+        local offset = Vector3.new(offsetAmount, 0, math.random(-2, 2))
+        local fakePos = delayed.position + offset
+        
+        -- Set fake position
+        rootPart.Position = fakePos
+        
+        -- Revert
+        task.spawn(function()
+            wait(0.02)
+            if rootPart and rootPart.Parent then
+                rootPart.Position = delayed.position
+            end
+        end)
+    end)
+end
+
+-- Switch between methods
+local methodIndex = 1
+local methods = {
+    { name = "Velocity Desync", func = applyVelocityDesync },
+    { name = "Position Offset", func = applyOffsetDesync },
+    { name = "Full Desync", func = applyDesyncAlternative }
+}
+
+local function applyDesync()
+    -- Rotate through methods for best effect
+    methods[methodIndex].func()
+    methodIndex = methodIndex % #methods + 1
 end
 
 -- ========== UI ==========
@@ -232,8 +335,8 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 210, 0, 160)
-frame.Position = UDim2.new(0.5, -105, 0.5, -80)
+frame.Size = UDim2.new(0, 220, 0, 190)
+frame.Position = UDim2.new(0.5, -110, 0.5, -95)
 frame.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
 frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
@@ -245,7 +348,7 @@ corner.Parent = frame
 
 local border = Instance.new("Frame")
 border.Size = UDim2.new(1, 0, 1, 0)
-border.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+border.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 border.BackgroundTransparency = 0.85
 border.BorderSizePixel = 0
 border.Parent = frame
@@ -257,9 +360,9 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 32)
 title.Position = UDim2.new(0, 0, 0, 4)
 title.BackgroundTransparency = 1
-title.Text = "⏱️ DESYNC DELAY"
-title.TextColor3 = Color3.fromRGB(200, 230, 255)
-title.TextSize = 16
+title.Text = "🔴 DESYNC (ALTERNATIVE)"
+title.TextColor3 = Color3.fromRGB(255, 200, 200)
+title.TextSize = 15
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Center
 title.Parent = frame
@@ -275,20 +378,20 @@ statusText.Font = Enum.Font.GothamMedium
 statusText.TextXAlignment = Enum.TextXAlignment.Center
 statusText.Parent = frame
 
-local delayText = Instance.new("TextLabel")
-delayText.Size = UDim2.new(1, 0, 0, 18)
-delayText.Position = UDim2.new(0, 0, 0, 52)
-delayText.BackgroundTransparency = 1
-delayText.Text = "⏱️ Delay: " .. string.format("%.1f", DELAY_SECONDS) .. "s"
-delayText.TextColor3 = Color3.fromRGB(200, 200, 200)
-delayText.TextSize = 12
-delayText.Font = Enum.Font.Gotham
-delayText.TextXAlignment = Enum.TextXAlignment.Center
-delayText.Parent = frame
+local methodText = Instance.new("TextLabel")
+methodText.Size = UDim2.new(1, 0, 0, 16)
+methodText.Position = UDim2.new(0, 0, 0, 52)
+methodText.BackgroundTransparency = 1
+methodText.Text = "Method: Velocity"
+methodText.TextColor3 = Color3.fromRGB(200, 200, 200)
+methodText.TextSize = 11
+methodText.Font = Enum.Font.Gotham
+methodText.TextXAlignment = Enum.TextXAlignment.Center
+methodText.Parent = frame
 
 local ghostStatus = Instance.new("TextLabel")
-ghostStatus.Size = UDim2.new(1, 0, 0, 18)
-ghostStatus.Position = UDim2.new(0, 0, 0, 68)
+ghostStatus.Size = UDim2.new(1, 0, 0, 16)
+ghostStatus.Position = UDim2.new(0, 0, 0, 66)
 ghostStatus.BackgroundTransparency = 1
 ghostStatus.Text = "👻 Ghost: OFF"
 ghostStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -297,20 +400,20 @@ ghostStatus.Font = Enum.Font.Gotham
 ghostStatus.TextXAlignment = Enum.TextXAlignment.Center
 ghostStatus.Parent = frame
 
-local moveStatus = Instance.new("TextLabel")
-moveStatus.Size = UDim2.new(1, 0, 0, 16)
-moveStatus.Position = UDim2.new(0, 0, 0, 84)
-moveStatus.BackgroundTransparency = 1
-moveStatus.Text = "✅ Movement preserved"
-moveStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
-moveStatus.TextSize = 10
-moveStatus.Font = Enum.Font.Gotham
-moveStatus.TextXAlignment = Enum.TextXAlignment.Center
-moveStatus.Parent = frame
+local infoText = Instance.new("TextLabel")
+infoText.Size = UDim2.new(1, 0, 0, 30)
+infoText.Position = UDim2.new(0, 0, 0, 82)
+infoText.BackgroundTransparency = 1
+infoText.Text = "If not working, try:\n- Re-enable\n- Change delay in script"
+infoText.TextColor3 = Color3.fromRGB(150, 150, 180)
+infoText.TextSize = 9
+infoText.Font = Enum.Font.Gotham
+infoText.TextXAlignment = Enum.TextXAlignment.Center
+infoText.Parent = frame
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 80, 0, 26)
-toggleBtn.Position = UDim2.new(0.25, -40, 0, 108)
+toggleBtn.Position = UDim2.new(0.25, -40, 0, 135)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Text = "ENABLE"
@@ -325,7 +428,7 @@ btnCorner1.Parent = toggleBtn
 
 local ghostBtn = Instance.new("TextButton")
 ghostBtn.Size = UDim2.new(0, 80, 0, 26)
-ghostBtn.Position = UDim2.new(0.75, -40, 0, 108)
+ghostBtn.Position = UDim2.new(0.75, -40, 0, 135)
 ghostBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
 ghostBtn.BorderSizePixel = 0
 ghostBtn.Text = "GHOST ON"
@@ -348,11 +451,12 @@ closeBtn.TextSize = 14
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = frame
 
+-- Legend
 local legend = Instance.new("TextLabel")
 legend.Size = UDim2.new(1, 0, 0, 14)
-legend.Position = UDim2.new(0, 0, 0, 143)
+legend.Position = UDim2.new(0, 0, 0, 172)
 legend.BackgroundTransparency = 1
-legend.Text = "🔵 Blue ghost = where others see you"
+legend.Text = "🔴 Red ghost = where others see you"
 legend.TextColor3 = Color3.fromRGB(150, 150, 180)
 legend.TextSize = 9
 legend.Font = Enum.Font.Gotham
@@ -365,9 +469,9 @@ local dragData = { active = false, startPos = nil, frameStart = nil }
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         local x, y = input.Position.X, input.Position.Y
-        if y > 103 and y < 133 and x > 20 and x < 100 then return end
-        if y > 103 and y < 133 and x > 120 and x < 200 then return end
-        if y > 3 and y < 25 and x > 165 and x < 190 then return end
+        if y > 130 and y < 160 and x > 20 and x < 100 then return end
+        if y > 130 and y < 160 and x > 120 and x < 200 then return end
+        if y > 3 and y < 25 and x > 175 and x < 200 then return end
         dragData.active = true
         dragData.startPos = input.Position
         dragData.frameStart = frame.Position
@@ -390,7 +494,7 @@ frame.InputEnded:Connect(function()
     dragData.active = false
 end)
 
--- ========== TOGGLE LOGIC ==========
+-- ========== TOGGLE ==========
 local debounce = false
 
 local function setDesyncState(newState)
@@ -401,17 +505,15 @@ local function setDesyncState(newState)
         toggleBtn.Text = "DISABLE"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
         border.BackgroundTransparency = 0.3
-        moveStatus.Text = "✅ Movement preserved"
-        moveStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
-        
         state.positionHistory = {}
+        methodText.Text = "Method: " .. methods[methodIndex].name
         
         if not state.ghostEnabled then
             setGhostVisible(true)
             ghostBtn.Text = "GHOST ON"
             ghostBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
             ghostStatus.Text = "👻 Ghost: ON"
-            ghostStatus.TextColor3 = Color3.fromRGB(100, 200, 255)
+            ghostStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
         
         pcall(function()
@@ -459,7 +561,7 @@ ghostBtn.MouseButton1Click:Connect(function()
         ghostBtn.Text = "GHOST ON"
         ghostBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
         ghostStatus.Text = "👻 Ghost: ON"
-        ghostStatus.TextColor3 = Color3.fromRGB(100, 200, 255)
+        ghostStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
         if not state.ghostParts or not state.ghostParts.group then
             createGhostFigure()
         end
@@ -482,7 +584,7 @@ ghostBtn.TouchTap:Connect(function()
         ghostBtn.Text = "GHOST ON"
         ghostBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
         ghostStatus.Text = "👻 Ghost: ON"
-        ghostStatus.TextColor3 = Color3.fromRGB(100, 200, 255)
+        ghostStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
         if not state.ghostParts or not state.ghostParts.group then
             createGhostFigure()
         end
@@ -504,10 +606,8 @@ end)
 RunService.Heartbeat:Connect(function(delta)
     if not state.active then return end
     
-    -- Record current position (doesn't affect movement)
     recordPosition()
     
-    -- Apply desync via velocity spoofing only
     state.lastUpdate = state.lastUpdate + delta
     if state.lastUpdate >= UPDATE_INTERVAL then
         state.lastUpdate = 0
@@ -525,7 +625,7 @@ pcall(function()
             if ping then
                 local mt = getrawmetatable(ping) or {}
                 mt.__index = function(t, k)
-                    if k == "Value" then return 120 + math.random(0, 30) end
+                    if k == "Value" then return 200 + math.random(0, 50) end
                     return rawget(t, k)
                 end
                 setrawmetatable(ping, mt)
@@ -543,5 +643,12 @@ LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
-print("Desync loaded - Movement preserved! Your avatar appears " .. string.format("%.1f", DELAY_SECONDS) .. "s behind for others.")
-print("Blue ghost shows where others see you. You can move freely.")
+print("=== ALTERNATIVE DESYNC LOADED ===")
+print("This uses 3 different methods rotating:")
+print("1. Velocity Desync - sends delayed velocity")
+print("2. Position Offset - adds small offset to position")
+print("3. Full Desync - sends delayed position outright")
+print("")
+print("If still not working, Roblox may have patched this method.")
+print("Try changing DELAY_SECONDS to 2.0 or 2.5 at the top of script.")
+print("Red ghost shows where others see you.")
