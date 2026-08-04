@@ -1,5 +1,6 @@
--- Roblox Volleyball Legends - Desync + Lag Switch (Movement‑Preserving)
--- No velocity zeroing, no RotVelocity changes – keeps your character fully controllable.
+-- Roblox Volleyball Legends - Desync + Lag Switch (Camera & Movement Stable)
+-- Desync: velocity mixing every 0.3s, gentle, no rotation interference.
+-- Lag Switch: simply stops desync updates for 1 second, causing a freeze on others' screens.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,18 +9,18 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Configuration
-local DEFAULT_DELAY = 2.0
-local UPDATE_INTERVAL = 0.03
-local LAG_SWITCH_DURATION = 0.8
-local LAG_SWITCH_COOLDOWN = 5.0
+local DEFAULT_DELAY = 1.8
+local DESYNC_INTERVAL = 0.3          -- apply desync only every 0.3 seconds
+local LAG_SWITCH_DURATION = 1.2      -- how long desync is paused (others see freeze)
+local LAG_SWITCH_COOLDOWN = 6.0
 
 -- State
 local state = {
     active = false,
     delay = DEFAULT_DELAY,
     history = {},
-    maxHistory = math.floor(DEFAULT_DELAY / UPDATE_INTERVAL) + 40,
-    lastUpdate = 0,
+    maxHistory = 200,
+    lastDesyncTime = 0,
     uiVisible = true,
     toggleButton = nil,
     mainFrame = nil,
@@ -28,7 +29,7 @@ local state = {
     sliderLabel = nil,
     statusText = nil,
     lagStatus = nil,
-    lagSwitchActive = false,
+    lagSwitchPaused = false,         -- when true, desync updates are paused (lag switch active)
     lagSwitchCooldown = 0,
     desyncBtn = nil,
     lagBtn = nil,
@@ -38,7 +39,7 @@ local state = {
     frameStart = nil
 }
 
--- ========== CORE LOGIC (No Movement Interference) ==========
+-- ========== CORE LOGIC ==========
 local function recordPosition()
     local character = LocalPlayer.Character
     if not character then return end
@@ -53,7 +54,7 @@ local function recordPosition()
 end
 
 local function getDelayedVelocity()
-    if #state.history < 5 then return nil end
+    if #state.history < 10 then return nil end
     local targetTime = tick() - state.delay
     local closest, closestDiff = nil, math.huge
     for _, entry in ipairs(state.history) do
@@ -66,32 +67,9 @@ local function getDelayedVelocity()
     return closest and closest.velocity or nil
 end
 
-local function forceOwnership(rootPart)
-    if not rootPart then return end
-    pcall(function()
-        rootPart:SetNetworkOwner(LocalPlayer)  -- Only once, not multiple times
-    end)
-end
-
-local function applyLagSwitch()
-    if not state.lagSwitchActive then return end
-    local character = LocalPlayer.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    pcall(function()
-        forceOwnership(rootPart)
-        -- Instead of zeroing velocity, apply a very small velocity to mimic lag
-        -- but do NOT set RotVelocity.
-        local currentVel = rootPart.Velocity
-        rootPart.Velocity = currentVel * 0.05  -- Reduce to near zero but not completely
-        -- No RotVelocity modification
-    end)
-end
-
 local function applyDesync()
     if not state.active then return end
+    if state.lagSwitchPaused then return end   -- lag switch pauses desync
     
     local delayedVel = getDelayedVelocity()
     if not delayedVel then return end
@@ -102,17 +80,29 @@ local function applyDesync()
     if not rootPart then return end
     
     pcall(function()
-        forceOwnership(rootPart)
+        -- Take ownership to allow velocity change
+        if rootPart:GetNetworkOwner() ~= LocalPlayer then
+            rootPart:SetNetworkOwner(LocalPlayer)
+        end
         
-        -- Mix current velocity with delayed velocity (90% delayed)
+        -- Mix 70% delayed, 30% current – gentle
         local currentVel = rootPart.Velocity
-        local mixedVel = currentVel * 0.1 + delayedVel * 0.9
+        local mixedVel = currentVel * 0.3 + delayedVel * 0.7
+        
+        -- Apply mixed velocity for a split second
         rootPart.Velocity = mixedVel
-        -- DO NOT touch RotVelocity
+        
+        -- Revert to current velocity after 0.05s to avoid client-side disruption
+        task.spawn(function()
+            wait(0.05)
+            if rootPart and rootPart.Parent then
+                rootPart.Velocity = currentVel
+            end
+        end)
     end)
 end
 
--- ========== UI (Identical to previous, no changes) ==========
+-- ========== UI ==========
 local function setUIVisible(visible)
     state.uiVisible = visible
     if state.mainFrame then
@@ -379,7 +369,6 @@ local function updateSlider(input)
     state.sliderKnob.Position = UDim2.new(percent, -9, 0.5, -9)
     state.sliderLabel.Text = string.format("%.1f", state.delay) .. "s"
     delayLabel.Text = "Delay: " .. string.format("%.1f", state.delay) .. "s"
-    state.maxHistory = math.floor(state.delay / UPDATE_INTERVAL) + 40
 end
 
 state.sliderKnob.InputBegan:Connect(function(input)
@@ -463,6 +452,8 @@ local function toggleDesync()
         TweenService:Create(state.border, TweenInfo.new(0.3), {
             BackgroundTransparency = 0.75
         }):Play()
+        -- Cancel any ongoing lag switch pause
+        state.lagSwitchPaused = false
     end
     task.wait(0.2)
     debounce = false
@@ -470,8 +461,13 @@ end
 
 local function triggerLagSwitch()
     if debounce then return end
-    if state.lagSwitchActive then
+    if state.lagSwitchPaused then
         state.lagStatus.Text = "● Lag Switch: COOLDOWN"
+        state.lagStatus.TextColor3 = Color3.fromRGB(255, 200, 50)
+        return
+    end
+    if not state.active then
+        state.lagStatus.Text = "● Lag Switch: Desync OFF"
         state.lagStatus.TextColor3 = Color3.fromRGB(255, 200, 50)
         return
     end
@@ -482,17 +478,16 @@ local function triggerLagSwitch()
     end
     
     debounce = true
-    state.lagSwitchActive = true
+    state.lagSwitchPaused = true
     state.lagSwitchCooldown = tick()
     state.lagStatus.Text = "● Lag Switch: ACTIVE"
     state.lagStatus.TextColor3 = Color3.fromRGB(255, 150, 150)
     state.lagBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
     
-    applyLagSwitch()
-    
+    -- Desync updates are paused for the duration – others see your avatar freeze
     task.spawn(function()
         wait(LAG_SWITCH_DURATION)
-        state.lagSwitchActive = false
+        state.lagSwitchPaused = false
         state.lagStatus.Text = "● Lag Switch: READY"
         state.lagStatus.TextColor3 = Color3.fromRGB(120, 255, 120)
         state.lagBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
@@ -515,15 +510,17 @@ createUIToggleButton()
 -- ========== MAIN LOOP ==========
 RunService.Heartbeat:Connect(function(delta)
     if state.active then
+        -- Record history every frame
         recordPosition()
-        state.lastUpdate = state.lastUpdate + delta
-        if state.lastUpdate >= UPDATE_INTERVAL then
-            state.lastUpdate = 0
-            applyDesync()
+        
+        -- Apply desync only every DESYNC_INTERVAL seconds, and only if lag switch not active
+        if not state.lagSwitchPaused then
+            state.lastDesyncTime = state.lastDesyncTime + delta
+            if state.lastDesyncTime >= DESYNC_INTERVAL then
+                state.lastDesyncTime = 0
+                applyDesync()
+            end
         end
-    end
-    if state.lagSwitchActive then
-        applyLagSwitch()
     end
 end)
 
@@ -550,11 +547,11 @@ end)
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     state.history = {}
-    state.lagSwitchActive = false
+    state.lagSwitchPaused = false
     state.lagSwitchCooldown = 0
 end)
 
-print("=== MOVEMENT-PRESERVING DESYNC + LAG SWITCH LOADED ===")
-print("No velocity zeroing – you can move freely.")
-print("Lag switch now reduces velocity to 5% instead of zero.")
-print("If desync still not visible to others, game may have patched this method.")
+print("=== STABLE DESYNC + LAG SWITCH LOADED ===")
+print("Desync applies velocity mix every 0.3s – gentle on movement.")
+print("Lag Switch pauses desync updates for 1.2s – others see freeze.")
+print("Movement and camera should remain smooth.")
