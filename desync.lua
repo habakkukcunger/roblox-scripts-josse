@@ -1,26 +1,24 @@
--- Roblox Volleyball Legends - Desync + Lag Switch (Camera & Movement Stable)
--- Desync: velocity mixing every 0.3s, gentle, no rotation interference.
--- Lag Switch: simply stops desync updates for 1 second, causing a freeze on others' screens.
-
+--[[ ULTIMATE DESYNC + LAG SWITCH (FINAL) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
--- Configuration
-local DEFAULT_DELAY = 1.8
-local DESYNC_INTERVAL = 0.3          -- apply desync only every 0.3 seconds
-local LAG_SWITCH_DURATION = 1.2      -- how long desync is paused (others see freeze)
-local LAG_SWITCH_COOLDOWN = 6.0
+local DEFAULT_DELAY = 2.0
+local UPDATE_INTERVAL = 0.05
+local HOLD_TIME = 0.1
+local LAG_SWITCH_DURATION = 1.0
+local LAG_SWITCH_COOLDOWN = 5.0
 
--- State
 local state = {
     active = false,
     delay = DEFAULT_DELAY,
     history = {},
     maxHistory = 200,
-    lastDesyncTime = 0,
+    lastUpdate = 0,
+    lagSwitchPaused = false,
+    lagSwitchCooldown = 0,
     uiVisible = true,
     toggleButton = nil,
     mainFrame = nil,
@@ -29,8 +27,6 @@ local state = {
     sliderLabel = nil,
     statusText = nil,
     lagStatus = nil,
-    lagSwitchPaused = false,         -- when true, desync updates are paused (lag switch active)
-    lagSwitchCooldown = 0,
     desyncBtn = nil,
     lagBtn = nil,
     border = nil,
@@ -39,75 +35,66 @@ local state = {
     frameStart = nil
 }
 
--- ========== CORE LOGIC ==========
+-- ========== CORE ==========
 local function recordPosition()
-    local character = LocalPlayer.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
     table.insert(state.history, {
-        velocity = rootPart.Velocity,
+        cframe = root.CFrame,
+        velocity = root.Velocity,
         time = tick()
     })
     if #state.history > state.maxHistory then table.remove(state.history,1) end
 end
 
-local function getDelayedVelocity()
+local function getDelayedState()
     if #state.history < 10 then return nil end
-    local targetTime = tick() - state.delay
-    local closest, closestDiff = nil, math.huge
+    local target = tick() - state.delay
+    local best, bestDiff = nil, math.huge
     for _, entry in ipairs(state.history) do
-        local diff = math.abs(entry.time - targetTime)
-        if diff < closestDiff then
-            closestDiff = diff
-            closest = entry
+        local diff = math.abs(entry.time - target)
+        if diff < bestDiff then
+            bestDiff = diff
+            best = entry
         end
     end
-    return closest and closest.velocity or nil
+    return best
 end
 
 local function applyDesync()
-    if not state.active then return end
-    if state.lagSwitchPaused then return end   -- lag switch pauses desync
-    
-    local delayedVel = getDelayedVelocity()
-    if not delayedVel then return end
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
+    if not state.active or state.lagSwitchPaused then return end
+    local delayed = getDelayedState()
+    if not delayed then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
     pcall(function()
-        -- Take ownership to allow velocity change
-        if rootPart:GetNetworkOwner() ~= LocalPlayer then
-            rootPart:SetNetworkOwner(LocalPlayer)
+        if root:GetNetworkOwner() ~= LocalPlayer then
+            root:SetNetworkOwner(LocalPlayer)
         end
-        
-        -- Mix 70% delayed, 30% current – gentle
-        local currentVel = rootPart.Velocity
-        local mixedVel = currentVel * 0.3 + delayedVel * 0.7
-        
-        -- Apply mixed velocity for a split second
-        rootPart.Velocity = mixedVel
-        
-        -- Revert to current velocity after 0.05s to avoid client-side disruption
+        local realCF = root.CFrame
+        local realVel = root.Velocity
+        root.CFrame = delayed.cframe
+        root.Velocity = delayed.velocity
         task.spawn(function()
-            wait(0.05)
-            if rootPart and rootPart.Parent then
-                rootPart.Velocity = currentVel
+            wait(HOLD_TIME)
+            if root and root.Parent then
+                pcall(function()
+                    root.CFrame = realCF
+                    root.Velocity = realVel
+                end)
             end
         end)
     end)
 end
 
--- ========== UI ==========
+-- ========== UI FUNCTIONS ==========
 local function setUIVisible(visible)
     state.uiVisible = visible
-    if state.mainFrame then
-        state.mainFrame.Visible = visible
-    end
+    if state.mainFrame then state.mainFrame.Visible = visible end
     if state.toggleButton then
         state.toggleButton.BackgroundColor3 = visible and Color3.fromRGB(0,200,100) or Color3.fromRGB(200,50,50)
     end
@@ -120,7 +107,6 @@ local function createUIToggleButton()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui")
     gui.Parent = playerGui
-
     local btn = Instance.new("TextButton")
     btn.Name = "UIToggleBtn"
     btn.Size = UDim2.new(0, 48, 0, 48)
@@ -134,13 +120,11 @@ local function createUIToggleButton()
     btn.Font = Enum.Font.GothamBold
     btn.ZIndex = 10
     btn.Parent = gui
-
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1,0)
     corner.Parent = btn
     local shadow = Instance.new("UIShadow")
     shadow.Parent = btn
-
     btn.MouseButton1Click:Connect(function() setUIVisible(not state.uiVisible) end)
     btn.TouchTap:Connect(function() setUIVisible(not state.uiVisible) end)
     btn.InputBegan:Connect(function(input)
@@ -149,12 +133,11 @@ local function createUIToggleButton()
             setUIVisible(not state.uiVisible)
         end
     end)
-
     state.toggleButton = btn
     return btn
 end
 
--- ========== UI CREATION ==========
+-- ========== MAIN UI ==========
 local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui")
 local oldGui = playerGui:FindFirstChild("DesyncUI")
 if oldGui then oldGui:Destroy() end
@@ -301,7 +284,6 @@ maxLabel.TextSize = 10
 maxLabel.Font = Enum.Font.Gotham
 maxLabel.Parent = frame
 
--- BUTTONS
 state.desyncBtn = Instance.new("TextButton")
 state.desyncBtn.Size = UDim2.new(0, 120, 0, 34)
 state.desyncBtn.Position = UDim2.new(0, 20, 0, 165)
@@ -376,13 +358,11 @@ state.sliderKnob.InputBegan:Connect(function(input)
         sliderDragging = true
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         sliderDragging = false
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         updateSlider(input)
@@ -404,23 +384,13 @@ local function startDrag(input)
         state.frameStart = frame.Position
     end
 end
-
 local function moveDrag(input)
     if state.isDragging then
         local delta = input.Position - state.dragStart
-        frame.Position = UDim2.new(
-            state.frameStart.X.Scale,
-            state.frameStart.X.Offset + delta.X,
-            state.frameStart.Y.Scale,
-            state.frameStart.Y.Offset + delta.Y
-        )
+        frame.Position = UDim2.new(state.frameStart.X.Scale, state.frameStart.X.Offset + delta.X, state.frameStart.Y.Scale, state.frameStart.Y.Offset + delta.Y)
     end
 end
-
-local function endDrag()
-    state.isDragging = false
-end
-
+local function endDrag() state.isDragging = false end
 title.InputBegan:Connect(startDrag)
 title.InputChanged:Connect(moveDrag)
 title.InputEnded:Connect(endDrag)
@@ -449,10 +419,7 @@ local function toggleDesync()
         state.statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
         state.desyncBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
         state.border.BackgroundTransparency = 0.75
-        TweenService:Create(state.border, TweenInfo.new(0.3), {
-            BackgroundTransparency = 0.75
-        }):Play()
-        -- Cancel any ongoing lag switch pause
+        TweenService:Create(state.border, TweenInfo.new(0.3), { BackgroundTransparency = 0.75 }):Play()
         state.lagSwitchPaused = false
     end
     task.wait(0.2)
@@ -476,15 +443,12 @@ local function triggerLagSwitch()
         state.lagStatus.TextColor3 = Color3.fromRGB(255, 200, 50)
         return
     end
-    
     debounce = true
     state.lagSwitchPaused = true
     state.lagSwitchCooldown = tick()
     state.lagStatus.Text = "● Lag Switch: ACTIVE"
     state.lagStatus.TextColor3 = Color3.fromRGB(255, 150, 150)
     state.lagBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    
-    -- Desync updates are paused for the duration – others see your avatar freeze
     task.spawn(function()
         wait(LAG_SWITCH_DURATION)
         state.lagSwitchPaused = false
@@ -497,29 +461,21 @@ end
 
 state.desyncBtn.MouseButton1Click:Connect(toggleDesync)
 state.desyncBtn.TouchTap:Connect(toggleDesync)
-
 state.lagBtn.MouseButton1Click:Connect(triggerLagSwitch)
 state.lagBtn.TouchTap:Connect(triggerLagSwitch)
-
 closeBtn.MouseButton1Click:Connect(function() setUIVisible(false) end)
 closeBtn.TouchTap:Connect(function() setUIVisible(false) end)
 
--- ========== UI TOGGLE BUTTON ==========
 createUIToggleButton()
 
 -- ========== MAIN LOOP ==========
 RunService.Heartbeat:Connect(function(delta)
     if state.active then
-        -- Record history every frame
         recordPosition()
-        
-        -- Apply desync only every DESYNC_INTERVAL seconds, and only if lag switch not active
-        if not state.lagSwitchPaused then
-            state.lastDesyncTime = state.lastDesyncTime + delta
-            if state.lastDesyncTime >= DESYNC_INTERVAL then
-                state.lastDesyncTime = 0
-                applyDesync()
-            end
+        state.lastUpdate = state.lastUpdate + delta
+        if state.lastUpdate >= UPDATE_INTERVAL then
+            state.lastUpdate = 0
+            applyDesync()
         end
     end
 end)
@@ -543,7 +499,6 @@ pcall(function()
     end
 end)
 
--- ========== RESPAWN ==========
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     state.history = {}
@@ -551,7 +506,6 @@ LocalPlayer.CharacterAdded:Connect(function()
     state.lagSwitchCooldown = 0
 end)
 
-print("=== STABLE DESYNC + LAG SWITCH LOADED ===")
-print("Desync applies velocity mix every 0.3s – gentle on movement.")
-print("Lag Switch pauses desync updates for 1.2s – others see freeze.")
-print("Movement and camera should remain smooth.")
+print("=== FINAL DESYNC + LAG SWITCH LOADED ===")
+print("Desync applies delayed CFrame and velocity every 0.05s, holds for 0.1s.")
+print("Test with a second account. If still not working, the technique is patched.")
