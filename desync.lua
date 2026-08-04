@@ -1,6 +1,5 @@
--- Roblox Volleyball Legends - FORCED Desync + Lag Switch (Anti-Patch)
--- Uses aggressive velocity spoofing, position snapping, and network flooding.
--- Designed to overcome server corrections.
+-- Roblox Volleyball Legends - Desync + Lag Switch (Movement‑Preserving)
+-- No velocity zeroing, no RotVelocity changes – keeps your character fully controllable.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Configuration
 local DEFAULT_DELAY = 2.0
-local UPDATE_INTERVAL = 0.03  -- Faster updates
+local UPDATE_INTERVAL = 0.03
 local LAG_SWITCH_DURATION = 0.8
 local LAG_SWITCH_COOLDOWN = 5.0
 
@@ -36,11 +35,10 @@ local state = {
     border = nil,
     isDragging = false,
     dragStart = nil,
-    frameStart = nil,
-    forceCounter = 0
+    frameStart = nil
 }
 
--- ========== CORE LOGIC (Aggressive) ==========
+-- ========== CORE LOGIC (No Movement Interference) ==========
 local function recordPosition()
     local character = LocalPlayer.Character
     if not character then return end
@@ -48,15 +46,13 @@ local function recordPosition()
     if not rootPart then return end
     
     table.insert(state.history, {
-        cframe = rootPart.CFrame,
         velocity = rootPart.Velocity,
-        position = rootPart.Position,
         time = tick()
     })
     if #state.history > state.maxHistory then table.remove(state.history,1) end
 end
 
-local function getDelayedPosition()
+local function getDelayedVelocity()
     if #state.history < 5 then return nil end
     local targetTime = tick() - state.delay
     local closest, closestDiff = nil, math.huge
@@ -67,17 +63,13 @@ local function getDelayedPosition()
             closest = entry
         end
     end
-    return closest
+    return closest and closest.velocity or nil
 end
 
--- Force ownership repeatedly to fight server reversion
 local function forceOwnership(rootPart)
     if not rootPart then return end
     pcall(function()
-        -- Call multiple times to ensure it sticks
-        for i = 1, 3 do
-            rootPart:SetNetworkOwner(LocalPlayer)
-        end
+        rootPart:SetNetworkOwner(LocalPlayer)  -- Only once, not multiple times
     end)
 end
 
@@ -90,39 +82,19 @@ local function applyLagSwitch()
     
     pcall(function()
         forceOwnership(rootPart)
-        
-        -- Zero velocity
-        rootPart.Velocity = Vector3.new(0,0,0)
-        rootPart.RotVelocity = Vector3.new(0,0,0)
-        
-        -- Snap to delayed position
-        local delayed = getDelayedPosition()
-        if delayed then
-            rootPart.CFrame = delayed.cframe
-            rootPart.Position = delayed.position
-        end
-        
-        -- Keep zeroed during the burst
-        task.spawn(function()
-            local startTime = tick()
-            while tick() - startTime < LAG_SWITCH_DURATION do
-                if rootPart and rootPart.Parent then
-                    pcall(function()
-                        rootPart.Velocity = Vector3.new(0,0,0)
-                        rootPart.RotVelocity = Vector3.new(0,0,0)
-                    end)
-                end
-                task.wait(0.02)
-            end
-        end)
+        -- Instead of zeroing velocity, apply a very small velocity to mimic lag
+        -- but do NOT set RotVelocity.
+        local currentVel = rootPart.Velocity
+        rootPart.Velocity = currentVel * 0.05  -- Reduce to near zero but not completely
+        -- No RotVelocity modification
     end)
 end
 
 local function applyDesync()
     if not state.active then return end
     
-    local delayed = getDelayedPosition()
-    if not delayed then return end
+    local delayedVel = getDelayedVelocity()
+    if not delayedVel then return end
     
     local character = LocalPlayer.Character
     if not character then return end
@@ -130,43 +102,17 @@ local function applyDesync()
     if not rootPart then return end
     
     pcall(function()
-        -- Force ownership every time
         forceOwnership(rootPart)
         
-        -- Method 1: Extreme velocity mix (95% delayed)
+        -- Mix current velocity with delayed velocity (90% delayed)
         local currentVel = rootPart.Velocity
-        local mixedVel = currentVel * 0.05 + delayed.velocity * 0.95
+        local mixedVel = currentVel * 0.1 + delayedVel * 0.9
         rootPart.Velocity = mixedVel
-        rootPart.RotVelocity = Vector3.new(0,0,0)
-        
-        -- Method 2: Position snap with longer hold
-        local realPos = rootPart.Position
-        rootPart.Position = delayed.position
-        rootPart.CFrame = delayed.cframe
-        
-        -- Keep the fake position held longer
-        task.spawn(function()
-            wait(0.05)  -- Longer hold time
-            if rootPart and rootPart.Parent then
-                pcall(function()
-                    rootPart.Position = realPos
-                    rootPart.Velocity = currentVel
-                end)
-            end
-        end)
-        
-        -- Method 3: Send fake velocity multiple times
-        for i = 1, 3 do
-            rootPart.Velocity = mixedVel
-            task.wait(0.005)
-        end
+        -- DO NOT touch RotVelocity
     end)
 end
 
--- ========== UI (Same as before, but with enhanced functionality) ==========
--- [UI creation code remains identical to the working version you had]
--- I'll include it fully below for completeness.
-
+-- ========== UI (Identical to previous, no changes) ==========
 local function setUIVisible(visible)
     state.uiVisible = visible
     if state.mainFrame then
@@ -608,6 +554,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     state.lagSwitchCooldown = 0
 end)
 
-print("=== FORCED DESYNC + LAG SWITCH LOADED ===")
-print("Enhanced anti-patch measures applied.")
-print("If still not working, game may have patched this method entirely.")
+print("=== MOVEMENT-PRESERVING DESYNC + LAG SWITCH LOADED ===")
+print("No velocity zeroing – you can move freely.")
+print("Lag switch now reduces velocity to 5% instead of zero.")
+print("If desync still not visible to others, game may have patched this method.")
