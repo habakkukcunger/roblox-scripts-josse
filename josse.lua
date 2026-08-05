@@ -220,6 +220,104 @@ local success, err = pcall(function()
         return Cd, B
     end
 
+    -- ========== SLIDER ROW TEMPLATE ==========
+    local function CreateSliderRow(parent, text, min, max, default, callback)
+        local Cd = Instance.new("Frame")
+        Cd.Size = UDim2.new(1, 0, 0, 40)
+        Cd.BackgroundColor3 = BG_PANEL
+        Cd.BorderSizePixel = 0
+        Cd.Parent = parent
+
+        local cdCorner = Instance.new("UICorner")
+        cdCorner.CornerRadius = UDim.new(0, 5)
+        cdCorner.Parent = Cd
+        
+        local Lb = Instance.new("TextLabel")
+        Lb.Size = UDim2.new(1, -70, 1, 0)
+        Lb.Position = UDim2.new(0, 10, 0, 0)
+        Lb.Text = text .. ": " .. tostring(default)
+        Lb.TextColor3 = TEXT_SECONDARY
+        Lb.TextSize = 11
+        Lb.Font = Enum.Font.GothamMedium
+        Lb.TextXAlignment = Enum.TextXAlignment.Left
+        Lb.BackgroundTransparency = 1
+        Lb.Parent = Cd
+
+        local Slider = Instance.new("Frame")
+        Slider.Size = UDim2.new(0, 80, 0, 6)
+        Slider.Position = UDim2.new(1, -90, 0.5, -3)
+        Slider.BackgroundColor3 = BG_BUTTON
+        Slider.BorderSizePixel = 0
+        Slider.Parent = Cd
+
+        local sliderCorner = Instance.new("UICorner")
+        sliderCorner.CornerRadius = UDim.new(0, 3)
+        sliderCorner.Parent = Slider
+
+        local Fill = Instance.new("Frame")
+        Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        Fill.BackgroundColor3 = ACCENT
+        Fill.BorderSizePixel = 0
+        Fill.Parent = Slider
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 3)
+        fillCorner.Parent = Fill
+
+        local Knob = Instance.new("TextButton")
+        Knob.Size = UDim2.new(0, 10, 0, 10)
+        Knob.Position = UDim2.new((default - min) / (max - min), -5, 0.5, -5)
+        Knob.BackgroundColor3 = TEXT_PRIMARY
+        Knob.BorderSizePixel = 0
+        Knob.Text = ""
+        Knob.Parent = Slider
+
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1, 0)
+        knobCorner.Parent = Knob
+
+        local dragging = false
+        local currentVal = default
+
+        local function updateSlider(input)
+            if not dragging then return end
+            local pos = input.Position.X
+            local sliderX = Slider.AbsolutePosition.X
+            local sliderW = Slider.AbsoluteSize.X
+            local percent = math.clamp((pos - sliderX) / sliderW, 0, 1)
+            local val = min + percent * (max - min)
+            val = math.floor(val + 0.5)
+            currentVal = math.clamp(val, min, max)
+            Fill.Size = UDim2.new((currentVal - min) / (max - min), 0, 1, 0)
+            Knob.Position = UDim2.new((currentVal - min) / (max - min), -5, 0.5, -5)
+            Lb.Text = text .. ": " .. tostring(currentVal)
+            callback(currentVal)
+        end
+
+        Knob.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                updateSlider(input)
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                updateSlider(input)
+            end
+        end)
+
+        return Cd, function()
+            return currentVal
+        end
+    end
+
     local function CE()
         for _, i in pairs(ActiveBeams) do
             pcall(function()
@@ -231,6 +329,7 @@ local success, err = pcall(function()
         table.clear(ActiveBeams)
     end
 
+    -- Shiftlock (only on PC)
     CreateToggleRow(M, "Auto Shiftlock", function(v)
         SL = v
         if not v then JP, TD = false, nil end
@@ -241,17 +340,71 @@ local success, err = pcall(function()
         if not v then CE() end
     end)
 
-    -- ANTI-LAG SYSTEM (Super Aggressive, but preserves ESP beams)
+    -- ========== JUMP POWER SLIDER ==========
+    local JumpPowerEnabled = false
+    local JumpPowerValue = 60  -- default
+    local originalJumpPower = 50
+
+    local function applyJumpPower()
+        local char = LP.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        if JumpPowerEnabled then
+            hum.JumpPower = JumpPowerValue
+        else
+            hum.JumpPower = originalJumpPower
+        end
+    end
+
+    local jumpSlider, getJumpVal = CreateSliderRow(M, "Jump Power", 50, 80, 60, function(val)
+        JumpPowerValue = val
+        if JumpPowerEnabled then
+            applyJumpPower()
+        end
+    end)
+
+    -- Toggle for Jump Power ON/OFF
+    CreateToggleRow(M, "Jump Power ON", function(v)
+        JumpPowerEnabled = v
+        applyJumpPower()
+    end)
+
+    -- Force loop to keep Jump Power applied (fight server reverts)
+    task.spawn(function()
+        while task.wait(0.5) do
+            if JumpPowerEnabled then
+                local char = LP.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.JumpPower = JumpPowerValue
+                    end
+                end
+            end
+        end
+    end)
+
+    -- Apply on character respawn
+    LP.CharacterAdded:Connect(function(ch)
+        task.wait(0.3)
+        if JumpPowerEnabled then
+            local hum = ch:FindFirstChildOfClass("Humanoid")
+            if hum then
+                originalJumpPower = hum.JumpPower
+                hum.JumpPower = JumpPowerValue
+            end
+        end
+    end)
+
+    -- ========== ANTI-LAG SYSTEM (Preserves UI, only optimises graphics) ==========
     local AntiLagEnabled = false
     local OriginalStates = {}
     local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
     local SavedRenderQuality = nil
     local SavedQualityLevel = nil
-    local HiddenGuis = {}
-    local HiddenSounds = {}
 
     local function IsESPDown(obj)
-        -- Check if this beam is one of our ESP beams
         for _, entry in pairs(ActiveBeams) do
             if entry.Beam == obj then
                 return true
@@ -292,35 +445,30 @@ local success, err = pcall(function()
     local function ApplyAntiLag()
         local lighting = game:GetService("Lighting")
         
-        -- Save and remove Sky
         local sky = lighting:FindFirstChildOfClass("Sky")
         if sky and not SavedSkybox then
             SavedSkybox = sky:Clone()
             sky.Parent = nil
         end
         
-        -- Save and remove Atmosphere
         local atm = lighting:FindFirstChildOfClass("Atmosphere")
         if atm and not SavedAtmosphere then
             SavedAtmosphere = atm:Clone()
             atm.Parent = nil
         end
         
-        -- Remove Clouds
         for _, cloud in ipairs(lighting:GetChildren()) do
             if cloud:IsA("Clouds") then
                 pcall(function() cloud.Parent = nil end)
             end
         end
         
-        -- Disable all effects
         for _, effect in ipairs(lighting:GetChildren()) do
             if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
                 pcall(function() effect.Enabled = false end)
             end
         end
         
-        -- Lighting to minimum
         pcall(function()
             lighting.Ambient = Color3.fromRGB(128, 128, 128)
             lighting.Brightness = 2
@@ -329,7 +477,6 @@ local success, err = pcall(function()
             lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
         end)
         
-        -- Save and set Technology to Compatibility
         pcall(function()
             if not SavedLightingTech then
                 SavedLightingTech = lighting.Technology
@@ -339,7 +486,6 @@ local success, err = pcall(function()
             lighting.GlobalShadows = false
         end)
         
-        -- Super Low GFX: set quality to absolute minimum
         pcall(function()
             if settings() and settings().Rendering then
                 if not SavedQualityLevel then
@@ -357,10 +503,8 @@ local success, err = pcall(function()
             end
         end)
         
-        -- Optimise all existing objects, but preserve ESP beams
         for _, obj in ipairs(workspace:GetDescendants()) do
             pcall(function()
-                -- Skip ESP beams
                 if obj:IsA("Beam") and IsESPDown(obj) then return end
                 
                 if obj:IsA("BasePart") and not obj:IsA("Terrain") then
@@ -381,9 +525,7 @@ local success, err = pcall(function()
                 elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
                     SaveOriginalState(obj)
                     obj.Enabled = false
-                elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-                    SaveOriginalState(obj)
-                    obj.Enabled = false
+                -- We do NOT hide BillboardGui, SurfaceGui, or ScreenGui – keep UI visible
                 elseif obj:IsA("Sound") then
                     SaveOriginalState(obj)
                     obj.Playing = false
@@ -395,17 +537,8 @@ local success, err = pcall(function()
             end)
         end
         
-        -- Hide all other ScreenGuis except our own
-        for _, gui in ipairs(PG:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui ~= UI then
-                if not HiddenGuis[gui] then
-                    HiddenGuis[gui] = gui.Enabled
-                end
-                gui.Enabled = false
-            end
-        end
+        -- No longer hiding other ScreenGuis – removed that block
         
-        -- Mute all sounds globally (extra)
         pcall(function()
             for _, sound in ipairs(game:GetDescendants()) do
                 if sound:IsA("Sound") then
@@ -416,7 +549,6 @@ local success, err = pcall(function()
             end
         end)
         
-        -- Terrain optimisation
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -453,7 +585,6 @@ local success, err = pcall(function()
             end
         end)
         
-        -- Restore quality settings
         pcall(function()
             if settings() and settings().Rendering and SavedQualityLevel then
                 settings().Rendering.QualityLevel = SavedQualityLevel
@@ -491,16 +622,6 @@ local success, err = pcall(function()
             end)
         end
         
-        -- Restore hidden GUIs
-        for gui, wasEnabled in pairs(HiddenGuis) do
-            pcall(function()
-                if gui and gui.Parent then
-                    gui.Enabled = wasEnabled
-                end
-            end)
-        end
-        HiddenGuis = {}
-        
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -519,7 +640,7 @@ local success, err = pcall(function()
         AntiLagEnabled = v
         if v then
             ApplyAntiLag()
-            print("[JHubV6] Anti‑Lag ON (Super Aggressive, ESP preserved)")
+            print("[JHubV6] Anti‑Lag ON (Graphics only, UI preserved)")
         else
             RestoreOriginal()
             print("[JHubV6] Anti‑Lag OFF")
@@ -529,7 +650,6 @@ local success, err = pcall(function()
     -- ==================== LEAD FEET SYSTEM ====================
     local LeadFeetEnabled = false
 
-    -- Floating Lead Feet button
     local LFBtn = Instance.new("TextButton")
     LFBtn.Size = UDim2.new(0, 90, 0, 36)
     LFBtn.Position = UDim2.new(0.5, -45, 0.75, 0)
@@ -553,7 +673,6 @@ local success, err = pcall(function()
     lfStroke.Thickness = 1.4
     lfStroke.Parent = LFBtn
 
-    -- Make the floating button draggable
     local draggingLF = false
     local dragStartLF, startPosLF
 
@@ -580,7 +699,6 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Keep floating button on screen when resizing
     C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         local vs = C.ViewportSize
         local newX = math.clamp(LFBtn.AbsolutePosition.X, 0, vs.X - LFBtn.AbsoluteSize.X)
@@ -588,7 +706,6 @@ local success, err = pcall(function()
         LFBtn.Position = UDim2.new(0, newX, 0, newY)
     end)
 
-    -- Lead Feet activation function (smooth version)
     local function ActivateLeadFeet()
         local char = LP.Character
         if not char then return end
@@ -614,7 +731,6 @@ local success, err = pcall(function()
             local targetPos = result.Position + Vector3.new(0, 3, 0)
             local targetCFrame = CFrame.new(targetPos) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
             
-            -- Smooth fast drop
             local tweenInfo = TweenInfo.new(
                 0.12,
                 Enum.EasingStyle.Quad,
@@ -640,19 +756,17 @@ local success, err = pcall(function()
 
     LFBtn.MouseButton1Click:Connect(ActivateLeadFeet)
 
-    -- Toggle that shows/hides the floating button
     CreateToggleRow(M, "Lead Feet", function(v)
         LeadFeetEnabled = v
         LFBtn.Visible = v
     end)
+
     -- ==========================================================
 
-    -- Auto-reapply for new objects, but preserve ESP beams
     workspace.DescendantAdded:Connect(function(obj)
         if not AntiLagEnabled then return end
         task.wait(0.1)
         pcall(function()
-            -- Skip if this is an ESP beam
             if obj:IsA("Beam") and IsESPDown(obj) then return end
             
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
@@ -669,9 +783,6 @@ local success, err = pcall(function()
                     obj.Enabled = false
                 end
             elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
-                SaveOriginalState(obj)
-                obj.Enabled = false
-            elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
                 SaveOriginalState(obj)
                 obj.Enabled = false
             elseif obj:IsA("Sound") then
@@ -813,11 +924,12 @@ local success, err = pcall(function()
         Clamp()
     end)
 
-    -- Shiftlock
+    -- Shiftlock (only if not on mobile)
     local function SU(ch)
         local hm = ch:WaitForChild("Humanoid")
         hm.Jumping:Connect(function()
             if not SL then return end
+            if UserInputService.TouchEnabled then return end -- don't lock on mobile
             if JT then task.cancel(JT) end
             local l = C.CFrame.LookVector
             TD, JP = Vector3.new(l.X, 0, l.Z).Unit, true
@@ -838,7 +950,8 @@ local success, err = pcall(function()
     LP.CharacterAdded:Connect(SU)
 
     RunService.RenderStepped:Connect(function()
-        if not SL or not JP or not TD then return end
+        -- Shiftlock only works on PC (not touch)
+        if not SL or not JP or not TD or UserInputService.TouchEnabled then return end
         local ch = LP.Character
         local rt, hm = ch and ch:FindFirstChild("HumanoidRootPart"), ch and ch:FindFirstChildOfClass("Humanoid")
         if rt and hm and hm.Health > 0 then
