@@ -241,10 +241,12 @@ local success, err = pcall(function()
         if not v then CE() end
     end)
 
-    -- ANTI-LAG SYSTEM (with FastFlag network manipulation)
+    -- ANTI-LAG SYSTEM (Super Low GFX - no FastFlags)
     local AntiLagEnabled = false
     local OriginalStates = {}
     local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
+    local SavedRenderQuality = nil
+    local SavedQualityLevel = nil
 
     local function SaveOriginalState(obj)
         if OriginalStates[obj] then return end
@@ -272,30 +274,35 @@ local success, err = pcall(function()
     local function ApplyAntiLag()
         local lighting = game:GetService("Lighting")
         
+        -- Save and remove Sky
         local sky = lighting:FindFirstChildOfClass("Sky")
         if sky and not SavedSkybox then
             SavedSkybox = sky:Clone()
             sky.Parent = nil
         end
         
+        -- Save and remove Atmosphere
         local atm = lighting:FindFirstChildOfClass("Atmosphere")
         if atm and not SavedAtmosphere then
             SavedAtmosphere = atm:Clone()
             atm.Parent = nil
         end
         
+        -- Remove Clouds
         for _, cloud in ipairs(lighting:GetChildren()) do
             if cloud:IsA("Clouds") then
                 pcall(function() cloud.Parent = nil end)
             end
         end
         
+        -- Disable all effects
         for _, effect in ipairs(lighting:GetChildren()) do
             if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
                 pcall(function() effect.Enabled = false end)
             end
         end
         
+        -- Lighting to minimum
         pcall(function()
             lighting.Ambient = Color3.fromRGB(128, 128, 128)
             lighting.Brightness = 2
@@ -304,6 +311,7 @@ local success, err = pcall(function()
             lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
         end)
         
+        -- Save and set Technology to Compatibility
         pcall(function()
             if not SavedLightingTech then
                 SavedLightingTech = lighting.Technology
@@ -313,11 +321,31 @@ local success, err = pcall(function()
             lighting.GlobalShadows = false
         end)
         
+        -- Super Low GFX: set quality to absolute minimum
+        pcall(function()
+            if settings() and settings().Rendering then
+                if not SavedQualityLevel then
+                    SavedQualityLevel = settings().Rendering.QualityLevel
+                end
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            end
+        end)
+        pcall(function()
+            if UserSettings() and UserSettings().GameSettings then
+                if not SavedRenderQuality then
+                    SavedRenderQuality = UserSettings().GameSettings.RenderQuality
+                end
+                UserSettings().GameSettings.RenderQuality = 0
+            end
+        end)
+        
+        -- Optimise all existing objects
         for _, obj in ipairs(workspace:GetDescendants()) do
             pcall(function()
                 if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                     SaveOriginalState(obj)
-                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.Material = Enum.Material.Plastic
+                    obj.Reflectance = 0
                     if obj:IsA("MeshPart") then
                         obj.TextureID = ""
                     end
@@ -337,6 +365,7 @@ local success, err = pcall(function()
             end)
         end
         
+        -- Terrain optimisation
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -370,6 +399,18 @@ local success, err = pcall(function()
             if SavedGlobalShadows ~= nil then
                 lighting.GlobalShadows = SavedGlobalShadows
                 SavedGlobalShadows = nil
+            end
+        end)
+        
+        -- Restore quality settings
+        pcall(function()
+            if settings() and settings().Rendering and SavedQualityLevel then
+                settings().Rendering.QualityLevel = SavedQualityLevel
+                SavedQualityLevel = nil
+            end
+            if UserSettings() and UserSettings().GameSettings and SavedRenderQuality ~= nil then
+                UserSettings().GameSettings.RenderQuality = SavedRenderQuality
+                SavedRenderQuality = nil
             end
         end)
         
@@ -411,30 +452,10 @@ local success, err = pcall(function()
         AntiLagEnabled = v
         if v then
             ApplyAntiLag()
-            -- Apply network flags for desync attempt
-            pcall(function()
-                if setfflag then
-                    setfflag("DFIntDataSenderRate", "5")
-                    setfflag("DFIntS2PhysicsSenderRate", "5")
-                    setfflag("DFIntNetworkSendRate", "10")
-                    setfflag("DFIntNetworkLatencyTolerance", "100")
-                    print("[JHubV6] Anti‑Lag flags applied (desync attempt)")
-                else
-                    print("[JHubV6] setfflag not supported – skipping network flags")
-                end
-            end)
+            print("[JHubV6] Anti‑Lag ON (Super Low GFX)")
         else
             RestoreOriginal()
-            -- Reset network flags to defaults
-            pcall(function()
-                if setfflag then
-                    setfflag("DFIntDataSenderRate", "15")
-                    setfflag("DFIntS2PhysicsSenderRate", "15")
-                    setfflag("DFIntNetworkSendRate", "60")
-                    setfflag("DFIntNetworkLatencyTolerance", "30")
-                    print("[JHubV6] Anti‑Lag flags reset to defaults")
-                end
-            end)
+            print("[JHubV6] Anti‑Lag OFF")
         end
     end)
 
@@ -566,7 +587,7 @@ local success, err = pcall(function()
         pcall(function()
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                 SaveOriginalState(obj)
-                obj.Material = Enum.Material.SmoothPlastic
+                obj.Material = Enum.Material.Plastic
                 if obj:IsA("MeshPart") then obj.TextureID = "" end
             elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
                 SaveOriginalState(obj)
