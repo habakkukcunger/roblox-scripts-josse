@@ -1,3 +1,6 @@
+-- Roblox Volleyball Legends - JHubV6 with Super Low GFX Anti-Lag (No FastFlags)
+-- Copy and paste this entire script into Delta executor.
+
 local success, err = pcall(function()
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
