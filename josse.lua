@@ -47,10 +47,10 @@ local success, err = pcall(function()
     local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
     local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
-    -- Main Frame
+    -- Main Frame (height increased to fit all elements)
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 210)
-    M.Position = UDim2.new(0.05, 0, 0.35, 0)
+    M.Size = UDim2.new(0, 220, 0, 310)  -- was 210
+    M.Position = UDim2.new(0.05, 0, 0.3, 0)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
     M.Active = true
