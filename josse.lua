@@ -1,6 +1,3 @@
--- Roblox Volleyball Legends - JHubV6 with Super Low GFX Anti-Lag (No FastFlags)
--- Copy and paste this entire script into Delta executor.
-
 local success, err = pcall(function()
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
@@ -244,12 +241,24 @@ local success, err = pcall(function()
         if not v then CE() end
     end)
 
-    -- ANTI-LAG SYSTEM (Super Low GFX - no FastFlags)
+    -- ANTI-LAG SYSTEM (Super Aggressive, but preserves ESP beams)
     local AntiLagEnabled = false
     local OriginalStates = {}
     local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
     local SavedRenderQuality = nil
     local SavedQualityLevel = nil
+    local HiddenGuis = {}
+    local HiddenSounds = {}
+
+    local function IsESPDown(obj)
+        -- Check if this beam is one of our ESP beams
+        for _, entry in pairs(ActiveBeams) do
+            if entry.Beam == obj then
+                return true
+            end
+        end
+        return false
+    end
 
     local function SaveOriginalState(obj)
         if OriginalStates[obj] then return end
@@ -257,19 +266,25 @@ local success, err = pcall(function()
         if obj:IsA("BasePart") then
             state.Material = obj.Material
             state.Color = obj.Color
+            state.Reflectance = obj.Reflectance
             if obj:IsA("MeshPart") then
                 state.TextureID = obj.TextureID
             end
         elseif obj:IsA("Texture") or obj:IsA("Decal") then
             state.Texture = obj.Texture
             state.Transparency = obj.Transparency
-        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam") then
             state.Enabled = obj.Enabled
         elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
             state.Enabled = obj.Enabled
             state.Brightness = obj.Brightness
-        elseif obj:IsA("BillboardGui") then
+        elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
             state.Enabled = obj.Enabled
+        elseif obj:IsA("Sound") then
+            state.Playing = obj.Playing
+            state.Volume = obj.Volume
+        elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+            state.Scale = obj.Scale
         end
         if next(state) then OriginalStates[obj] = state end
     end
@@ -342,9 +357,12 @@ local success, err = pcall(function()
             end
         end)
         
-        -- Optimise all existing objects
+        -- Optimise all existing objects, but preserve ESP beams
         for _, obj in ipairs(workspace:GetDescendants()) do
             pcall(function()
+                -- Skip ESP beams
+                if obj:IsA("Beam") and IsESPDown(obj) then return end
+                
                 if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                     SaveOriginalState(obj)
                     obj.Material = Enum.Material.Plastic
@@ -355,18 +373,48 @@ local success, err = pcall(function()
                 elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
                     SaveOriginalState(obj)
                     obj.Transparency = 1
-                elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles")) then
-                    SaveOriginalState(obj)
-                    obj.Enabled = false
+                elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam")) then
+                    if not IsESPDown(obj) then
+                        SaveOriginalState(obj)
+                        obj.Enabled = false
+                    end
                 elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
                     SaveOriginalState(obj)
                     obj.Enabled = false
-                elseif obj:IsA("BillboardGui") then
+                elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
                     SaveOriginalState(obj)
                     obj.Enabled = false
+                elseif obj:IsA("Sound") then
+                    SaveOriginalState(obj)
+                    obj.Playing = false
+                    obj.Volume = 0
+                elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+                    SaveOriginalState(obj)
+                    obj.Scale = Vector3.new(0, 0, 0)
                 end
             end)
         end
+        
+        -- Hide all other ScreenGuis except our own
+        for _, gui in ipairs(PG:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui ~= UI then
+                if not HiddenGuis[gui] then
+                    HiddenGuis[gui] = gui.Enabled
+                end
+                gui.Enabled = false
+            end
+        end
+        
+        -- Mute all sounds globally (extra)
+        pcall(function()
+            for _, sound in ipairs(game:GetDescendants()) do
+                if sound:IsA("Sound") then
+                    SaveOriginalState(sound)
+                    sound.Playing = false
+                    sound.Volume = 0
+                end
+            end
+        end)
         
         -- Terrain optimisation
         pcall(function()
@@ -422,20 +470,36 @@ local success, err = pcall(function()
                 if obj:IsA("BasePart") then
                     if state.Material then obj.Material = state.Material end
                     if state.Color then obj.Color = state.Color end
+                    if state.Reflectance ~= nil then obj.Reflectance = state.Reflectance end
                     if obj:IsA("MeshPart") and state.TextureID ~= nil then obj.TextureID = state.TextureID end
                 elseif obj:IsA("Texture") or obj:IsA("Decal") then
                     if state.Texture then obj.Texture = state.Texture end
                     if state.Transparency then obj.Transparency = state.Transparency end
-                elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam") then
                     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
                 elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
                     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
                     if state.Brightness then obj.Brightness = state.Brightness end
-                elseif obj:IsA("BillboardGui") then
+                elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
                     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
+                elseif obj:IsA("Sound") then
+                    if state.Playing ~= nil then obj.Playing = state.Playing end
+                    if state.Volume then obj.Volume = state.Volume end
+                elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+                    if state.Scale then obj.Scale = state.Scale end
                 end
             end)
         end
+        
+        -- Restore hidden GUIs
+        for gui, wasEnabled in pairs(HiddenGuis) do
+            pcall(function()
+                if gui and gui.Parent then
+                    gui.Enabled = wasEnabled
+                end
+            end)
+        end
+        HiddenGuis = {}
         
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
@@ -455,7 +519,7 @@ local success, err = pcall(function()
         AntiLagEnabled = v
         if v then
             ApplyAntiLag()
-            print("[JHubV6] Anti‑Lag ON (Super Low GFX)")
+            print("[JHubV6] Anti‑Lag ON (Super Aggressive, ESP preserved)")
         else
             RestoreOriginal()
             print("[JHubV6] Anti‑Lag OFF")
@@ -583,27 +647,40 @@ local success, err = pcall(function()
     end)
     -- ==========================================================
 
-    -- Auto-reapply for new objects
+    -- Auto-reapply for new objects, but preserve ESP beams
     workspace.DescendantAdded:Connect(function(obj)
         if not AntiLagEnabled then return end
         task.wait(0.1)
         pcall(function()
+            -- Skip if this is an ESP beam
+            if obj:IsA("Beam") and IsESPDown(obj) then return end
+            
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                 SaveOriginalState(obj)
                 obj.Material = Enum.Material.Plastic
+                obj.Reflectance = 0
                 if obj:IsA("MeshPart") then obj.TextureID = "" end
             elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
                 SaveOriginalState(obj)
                 obj.Transparency = 1
-            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles")) then
-                SaveOriginalState(obj)
-                obj.Enabled = false
+            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam")) then
+                if not IsESPDown(obj) then
+                    SaveOriginalState(obj)
+                    obj.Enabled = false
+                end
             elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
                 SaveOriginalState(obj)
                 obj.Enabled = false
-            elseif obj:IsA("BillboardGui") then
+            elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
                 SaveOriginalState(obj)
                 obj.Enabled = false
+            elseif obj:IsA("Sound") then
+                SaveOriginalState(obj)
+                obj.Playing = false
+                obj.Volume = 0
+            elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+                SaveOriginalState(obj)
+                obj.Scale = Vector3.new(0, 0, 0)
             end
         end)
     end)
