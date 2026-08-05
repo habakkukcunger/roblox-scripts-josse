@@ -241,7 +241,7 @@ local success, err = pcall(function()
         if not v then CE() end
     end)
 
-    -- ANTI-LAG SYSTEM
+    -- ANTI-LAG SYSTEM (with FastFlag network manipulation)
     local AntiLagEnabled = false
     local OriginalStates = {}
     local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
@@ -411,8 +411,30 @@ local success, err = pcall(function()
         AntiLagEnabled = v
         if v then
             ApplyAntiLag()
+            -- Apply network flags for desync attempt
+            pcall(function()
+                if setfflag then
+                    setfflag("DFIntDataSenderRate", "5")
+                    setfflag("DFIntS2PhysicsSenderRate", "5")
+                    setfflag("DFIntNetworkSendRate", "10")
+                    setfflag("DFIntNetworkLatencyTolerance", "100")
+                    print("[JHubV6] Anti‑Lag flags applied (desync attempt)")
+                else
+                    print("[JHubV6] setfflag not supported – skipping network flags")
+                end
+            end)
         else
             RestoreOriginal()
+            -- Reset network flags to defaults
+            pcall(function()
+                if setfflag then
+                    setfflag("DFIntDataSenderRate", "15")
+                    setfflag("DFIntS2PhysicsSenderRate", "15")
+                    setfflag("DFIntNetworkSendRate", "60")
+                    setfflag("DFIntNetworkLatencyTolerance", "30")
+                    print("[JHubV6] Anti‑Lag flags reset to defaults")
+                end
+            end)
         end
     end)
 
