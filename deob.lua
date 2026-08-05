@@ -1,22 +1,3 @@
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:5796: attempt to perform arithmetic (pow) on string and number
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:8444: attempt to perform arithmetic (pow) on string and number
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:2222: attempt to perform arithmetic (pow) on string and number
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:4806: attempt to perform arithmetic (pow) on string and number
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:1: attempt to perform arithmetic (pow) on string and number
-1
-xdbherREtfUszsVZaEIztlQEi:2134: attempt to perform arithmetic (pow) on string and number
 --[[
 
 	Rayfield Interface Suite
