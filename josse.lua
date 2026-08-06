@@ -1,4 +1,5 @@
--- JHubV6 – All Features + Jump Boost (1.0)
+print("=== JHubV6 STARTED (Full Version) ===")
+
 local success, err = pcall(function()
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
@@ -15,7 +16,11 @@ local success, err = pcall(function()
         PG = LP:FindFirstChild("PlayerGui")
         if PG then break end
     end
-    if not PG then warn("PlayerGui not found") return end
+    if not PG then
+        warn("PlayerGui not found")
+        return
+    end
+    print("PlayerGui found")
     
     -- Destroy old UI
     local existing = PG:FindFirstChild("JHubV6")
@@ -28,6 +33,7 @@ local success, err = pcall(function()
     UI.ResetOnSpawn = false
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     UI.Parent = PG
+    print("UI created")
 
     -- Colors
     local ACCENT = Color3.fromRGB(235, 35, 75)
@@ -39,7 +45,7 @@ local success, err = pcall(function()
     local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
     local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
-    -- Main Frame (tall enough for all toggles)
+    -- Main Frame
     local M = Instance.new("Frame")
     M.Size = UDim2.new(0, 240, 0, 420)
     M.Position = UDim2.new(0.5, -120, 0.5, -210)
@@ -51,6 +57,7 @@ local success, err = pcall(function()
     M.BorderSizePixel = 0
     M.ClipsDescendants = true
     M.Parent = UI
+    print("Main frame created")
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
@@ -61,7 +68,6 @@ local success, err = pcall(function()
     S.Thickness = 1.2
     S.Parent = M
 
-    -- Padding and Layout
     local MP = Instance.new("UIPadding")
     MP.PaddingLeft = UDim.new(0, 12)
     MP.PaddingRight = UDim.new(0, 12)
@@ -401,7 +407,8 @@ local success, err = pcall(function()
         table.clear(ActiveBeams)
     end
 
-    -- ========== TOGGLES ==========
+    -- ========== TOGGLES (using reliable pattern) ==========
+    -- We'll use the standard CreateToggleRow for Shiftlock, ESP, Anti-Lag, Lead Feet
     CreateToggleRow(M, "Auto Shiftlock", function(v)
         SL = v
         if not v then JP, TD = false, nil end
@@ -417,11 +424,11 @@ local success, err = pcall(function()
         if v then ApplyAntiLag() else RestoreOriginal() end
     end)
 
-    -- ========== JUMP BOOST (1.0) ==========
-    local JumpBoostEnabled = false
-    local BOOST_AMOUNT = 1.0  -- Change this if you want
+    -- ========== SUPERHUMAN BOOST (Reliable Single Toggle) ==========
+    local SuperhumanBoostEnabled = false
+    local BOOST_AMOUNT = 1.0
 
-    local function applyJumpBoost(character)
+    local function applySuperhumanBoost(character)
         if not character then return end
         local hum = character:FindFirstChildOfClass("Humanoid")
         if not hum then return end
@@ -430,12 +437,11 @@ local success, err = pcall(function()
             hum._boostConn = nil
         end
         hum._boostConn = hum.Jumping:Connect(function()
-            if not JumpBoostEnabled then return end
+            if not SuperhumanBoostEnabled then return end
             local root = character:FindFirstChild("HumanoidRootPart")
             if root then
                 local vel = root.AssemblyLinearVelocity
                 root.AssemblyLinearVelocity = vel + Vector3.new(0, BOOST_AMOUNT, 0)
-                -- Optional: slightly increase JumpPower for smoother feel
                 if hum.JumpPower < 60 then
                     hum.JumpPower = 55
                 end
@@ -443,13 +449,63 @@ local success, err = pcall(function()
         end)
     end
 
-    CreateToggleRow(M, "Jump Boost (1.0)", function(v)
-        JumpBoostEnabled = v
-        local char = LP.Character
-        if char then
-            if v then
-                applyJumpBoost(char)
-            else
+    -- Create a custom row for Superhuman Boost with the reliable toggle logic
+    local boostRow = Instance.new("Frame")
+    boostRow.Size = UDim2.new(1, 0, 0, 34)
+    boostRow.BackgroundColor3 = BG_PANEL
+    boostRow.BorderSizePixel = 0
+    boostRow.Parent = M
+    local boostCorner = Instance.new("UICorner")
+    boostCorner.CornerRadius = UDim.new(0, 5)
+    boostCorner.Parent = boostRow
+
+    local boostLabel = Instance.new("TextLabel")
+    boostLabel.Size = UDim2.new(1, -80, 1, 0)
+    boostLabel.Position = UDim2.new(0, 12, 0, 0)
+    boostLabel.Text = "Superhuman Boost"
+    boostLabel.TextColor3 = TEXT_SECONDARY
+    boostLabel.TextSize = 12
+    boostLabel.Font = Enum.Font.GothamMedium
+    boostLabel.TextXAlignment = Enum.TextXAlignment.Left
+    boostLabel.BackgroundTransparency = 1
+    boostLabel.Parent = boostRow
+
+    local boostBtn = Instance.new("TextButton")
+    boostBtn.Size = UDim2.new(0, 50, 0, 22)
+    boostBtn.Position = UDim2.new(1, -60, 0.5, -11)
+    boostBtn.Text = "OFF"
+    boostBtn.Font = Enum.Font.GothamBold
+    boostBtn.TextSize = 10
+    boostBtn.BackgroundColor3 = BG_BUTTON
+    boostBtn.TextColor3 = TEXT_DIM
+    boostBtn.AutoButtonColor = false
+    boostBtn.BorderSizePixel = 0
+    boostBtn.Parent = boostRow
+    local boostBtnCorner = Instance.new("UICorner")
+    boostBtnCorner.CornerRadius = UDim.new(0, 4)
+    boostBtnCorner.Parent = boostBtn
+
+    -- Boost toggle function (reliable)
+    local boostDebounce = false
+    local function toggleBoost()
+        if boostDebounce then return end
+        boostDebounce = true
+        SuperhumanBoostEnabled = not SuperhumanBoostEnabled
+        print("Superhuman Boost set to: " .. tostring(SuperhumanBoostEnabled))
+        if SuperhumanBoostEnabled then
+            boostBtn.Text = "ON"
+            boostBtn.BackgroundColor3 = BG_BUTTON_ON
+            boostBtn.TextColor3 = TEXT_PRIMARY
+            boostLabel.TextColor3 = TEXT_PRIMARY
+            local char = LP.Character
+            if char then applySuperhumanBoost(char) end
+        else
+            boostBtn.Text = "OFF"
+            boostBtn.BackgroundColor3 = BG_BUTTON
+            boostBtn.TextColor3 = TEXT_DIM
+            boostLabel.TextColor3 = TEXT_SECONDARY
+            local char = LP.Character
+            if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hum and hum._boostConn then
                     hum._boostConn:Disconnect()
@@ -457,21 +513,34 @@ local success, err = pcall(function()
                 end
             end
         end
+        task.wait(0.3)
+        boostDebounce = false
+    end
+
+    -- Attach events to boost button (reliable)
+    boostBtn.MouseButton1Click:Connect(toggleBoost)
+    boostBtn.TouchTap:Connect(toggleBoost)
+    -- Also allow tapping the label as fallback
+    boostLabel.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            toggleBoost()
+        end
     end)
 
-    -- Apply Jump Boost on respawn and initial
+    -- Apply on respawn
     LP.CharacterAdded:Connect(function(ch)
         task.wait(0.2)
-        if JumpBoostEnabled then applyJumpBoost(ch) end
+        if SuperhumanBoostEnabled then applySuperhumanBoost(ch) end
     end)
 
+    -- Initial apply
     task.wait(0.3)
     local char = LP.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             hum._boostConn = hum.Jumping:Connect(function()
-                if not JumpBoostEnabled then return end
+                if not SuperhumanBoostEnabled then return end
                 local root = char:FindFirstChild("HumanoidRootPart")
                 if root then
                     local vel = root.AssemblyLinearVelocity
@@ -755,7 +824,7 @@ local success, err = pcall(function()
         end
     end)
 
-    print("JHubV6 loaded – all features + Jump Boost (1.0) working.")
+    print("JHubV6 loaded – all features + Superhuman Boost working.")
 end)
 
 if not success then
