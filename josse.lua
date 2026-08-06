@@ -1,4 +1,4 @@
-print("=== JHub (Async Desync Added) ===")
+print("=== JHub (Speed disabled in air) ===")
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -37,9 +37,9 @@ local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
--- ===== Main Frame (compact) =====
+-- ===== Main Frame =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 240, 0, 300) -- increased height for new toggle
+M.Size = UDim2.new(0, 240, 0, 300)
 M.Position = UDim2.new(0.5, -120, 0.5, -150)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.08
@@ -82,7 +82,7 @@ end
 M:GetPropertyChangedSignal("Position"):Connect(Clamp)
 C:GetPropertyChangedSignal("ViewportSize"):Connect(Clamp)
 
--- Title (no emoji)
+-- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 24)
 title.Text = "JOSSERPOPSIER"
@@ -154,7 +154,7 @@ hideBtn.MouseButton1Click:Connect(function()
     hideBtn.Text = M.Visible and "HIDE" or "SHOW"
 end)
 
--- ===== Helper: Reliable Toggle (Only Button Toggles) =====
+-- ===== Helper: Reliable Toggle =====
 local function CreateReliableToggle(parent, labelText, callback)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34)
@@ -233,42 +233,70 @@ local function CreateReliableToggle(parent, labelText, callback)
     }
 end
 
--- ===== 1. Superhuman Boost (Jump + Speed 15%) =====
+-- ===== 1. Superhuman Boost (Speed disabled in air) =====
 local boostEnabled = false
 local BOOST_AMOUNT = 1.0
 local SPEED_MULTIPLIER = 1.15
 local boostConnection = nil
 local originalWalkSpeed = 16
 local speedLoopConnection = nil
+local stateConnection = nil
+local currentHumanoid = nil
 
-local function applySpeed(character)
+local function getBoostedSpeed()
+    return originalWalkSpeed * SPEED_MULTIPLIER
+end
+
+local function applySpeedBasedOnState(humanoid)
+    if not humanoid then return end
+    if not boostEnabled then
+        humanoid.WalkSpeed = originalWalkSpeed
+        return
+    end
+    local state = humanoid:GetState()
+    if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Sprinting then
+        humanoid.WalkSpeed = getBoostedSpeed()
+    else
+        humanoid.WalkSpeed = originalWalkSpeed
+    end
+end
+
+local function onStateChanged(_, newState)
+    if not currentHumanoid then return end
+    applySpeedBasedOnState(currentHumanoid)
+end
+
+local function setupSpeedLogic(character)
     if not character then return end
     local hum = character:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-
+    currentHumanoid = hum
     if originalWalkSpeed == 16 then
         originalWalkSpeed = hum.WalkSpeed
     end
 
-    if boostEnabled then
-        hum.WalkSpeed = originalWalkSpeed * SPEED_MULTIPLIER
-    else
-        hum.WalkSpeed = originalWalkSpeed
+    -- Remove old connections
+    if stateConnection then
+        stateConnection:Disconnect()
+        stateConnection = nil
     end
-end
-
-local function setupSpeedLoop(character)
     if speedLoopConnection then
         speedLoopConnection:Disconnect()
         speedLoopConnection = nil
     end
+
+    -- State changed handler
+    stateConnection = hum.StateChanged:Connect(onStateChanged)
+
+    -- Speed loop (fallback to force speed)
     speedLoopConnection = RunService.Heartbeat:Connect(function()
-        if not character or not character.Parent then
-            character = LP.Character
-            if not character then return end
+        if hum and hum.Parent then
+            applySpeedBasedOnState(hum)
         end
-        applySpeed(character)
     end)
+
+    -- Initial apply
+    applySpeedBasedOnState(hum)
 end
 
 local function applyBoostJump(character)
@@ -295,7 +323,7 @@ end
 
 local function applyBoostFull(character)
     if not character then return end
-    applySpeed(character)
+    setupSpeedLogic(character)
     applyBoostJump(character)
 end
 
@@ -304,15 +332,8 @@ CreateReliableToggle(M, "Superhuman Boost", function(v)
     local char = LP.Character
     if char then
         applyBoostFull(char)
-        if v then
-            setupSpeedLoop(char)
-        else
-            if speedLoopConnection then
-                speedLoopConnection:Disconnect()
-                speedLoopConnection = nil
-            end
-            applySpeed(char)
-        end
+    else
+        -- Character not loaded yet, will be handled on CharacterAdded
     end
 end)
 
@@ -320,22 +341,38 @@ LP.CharacterAdded:Connect(function(ch)
     task.wait(0.2)
     if boostEnabled then
         applyBoostFull(ch)
-        setupSpeedLoop(ch)
     else
+        -- Clean up if boost off
+        if stateConnection then
+            stateConnection:Disconnect()
+            stateConnection = nil
+        end
         if speedLoopConnection then
             speedLoopConnection:Disconnect()
             speedLoopConnection = nil
         end
-        applySpeed(ch)
+        if boostConnection then
+            boostConnection:Disconnect()
+            boostConnection = nil
+        end
+        local hum = ch:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = originalWalkSpeed
+        end
     end
 end)
 
+-- Initial apply if character exists
 task.wait(0.3)
 local char = LP.Character
 if char then
-    applyBoostFull(char)
     if boostEnabled then
-        setupSpeedLoop(char)
+        applyBoostFull(char)
+    else
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum and originalWalkSpeed ~= 16 then
+            hum.WalkSpeed = originalWalkSpeed
+        end
     end
 end
 
@@ -654,7 +691,7 @@ CreateReliableToggle(M, "Anti-Lag", function(v)
     if v then ApplyAntiLag() else RestoreOriginal() end
 end)
 
--- ===== 5. Async Desync (Jump Trigger) =====
+-- ===== 5. Async Desync =====
 local asyncDesyncEnabled = false
 local asyncConnection = nil
 local ASYNC_COOLDOWN = 0.3
@@ -685,7 +722,6 @@ local function setupAsyncDesync(char)
     end
 end
 
--- Toggle for Async Desync
 CreateReliableToggle(M, "Async Desync", function(v)
     asyncDesyncEnabled = v
     local char = LP.Character
@@ -697,13 +733,11 @@ CreateReliableToggle(M, "Async Desync", function(v)
                 asyncConnection:Disconnect()
                 asyncConnection = nil
             end
-            -- Reset bandwidth to normal
             applyDesync(false)
         end
     end
 end)
 
--- Apply on respawn
 LP.CharacterAdded:Connect(function(ch)
     task.wait(0.2)
     if asyncDesyncEnabled then
@@ -716,7 +750,6 @@ LP.CharacterAdded:Connect(function(ch)
     end
 end)
 
--- Initial setup if character exists
 task.wait(0.3)
 local initialChar = LP.Character
 if initialChar and asyncDesyncEnabled then
@@ -745,7 +778,6 @@ workspace.DescendantAdded:Connect(function(obj)
         elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
             SaveOriginalState(obj)
             obj.Enabled = false
-        -- Skip Sound
         elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
             SaveOriginalState(obj)
             obj.Scale = Vector3.new(0, 0, 0)
@@ -753,4 +785,4 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
-print("JHub loaded – includes Async Desync toggle.")
+print("JHub loaded – Superhuman Boost speed now disables in air.")
