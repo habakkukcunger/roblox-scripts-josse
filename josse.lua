@@ -1,4 +1,4 @@
-print("=== JHub FINAL (Compact UI) ===")
+print("=== JHub FINAL (Speed Fix) ===")
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -37,9 +37,9 @@ local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
--- ===== Main Frame (shorter, no wasted space) =====
+-- ===== Main Frame (compact) =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 240, 0, 260)  -- reduced from 320
+M.Size = UDim2.new(0, 240, 0, 260)
 M.Position = UDim2.new(0.5, -120, 0.5, -130)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.08
@@ -59,7 +59,6 @@ stroke.Color = ACCENT
 stroke.Thickness = 1.2
 stroke.Parent = M
 
--- Padding and Layout
 local pad = Instance.new("UIPadding")
 pad.PaddingLeft = UDim.new(0, 12)
 pad.PaddingRight = UDim.new(0, 12)
@@ -73,7 +72,6 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Top
 layout.Parent = M
 
--- Clamp to screen
 local function Clamp()
     local vs = C.ViewportSize
     M.Position = UDim2.new(
@@ -217,7 +215,6 @@ local function CreateReliableToggle(parent, labelText, callback)
         debounce = false
     end
 
-    -- Only the button triggers the toggle
     btn.MouseButton1Click:Connect(toggle)
     btn.TouchTap:Connect(toggle)
     btn.InputBegan:Connect(function(input)
@@ -226,8 +223,6 @@ local function CreateReliableToggle(parent, labelText, callback)
             toggle()
         end
     end)
-
-    -- Label does NOT toggle
 
     return {
         toggle = toggle,
@@ -244,15 +239,46 @@ local BOOST_AMOUNT = 1.0
 local SPEED_MULTIPLIER = 1.15
 local boostConnection = nil
 local originalWalkSpeed = 16
+local speedLoopConnection = nil
 
-local function applyBoost(character)
+local function applySpeed(character)
     if not character then return end
     local hum = character:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
+    -- Store original speed once (only if not already set)
     if originalWalkSpeed == 16 then
         originalWalkSpeed = hum.WalkSpeed
     end
+
+    if boostEnabled then
+        hum.WalkSpeed = originalWalkSpeed * SPEED_MULTIPLIER
+    else
+        hum.WalkSpeed = originalWalkSpeed
+    end
+end
+
+local function setupSpeedLoop(character)
+    -- Remove old loop if exists
+    if speedLoopConnection then
+        speedLoopConnection:Disconnect()
+        speedLoopConnection = nil
+    end
+    -- Create new loop that forces speed every frame (0.1s interval)
+    speedLoopConnection = RunService.Heartbeat:Connect(function()
+        if not character or not character.Parent then
+            -- Character lost, try to get current character
+            character = LP.Character
+            if not character then return end
+        end
+        applySpeed(character)
+    end)
+end
+
+local function applyBoostJump(character)
+    if not character then return end
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
 
     if boostConnection then
         boostConnection:Disconnect()
@@ -268,42 +294,56 @@ local function applyBoost(character)
                 if hum.JumpPower < 60 then hum.JumpPower = 55 end
             end
         end)
-        hum.WalkSpeed = originalWalkSpeed * SPEED_MULTIPLIER
-        print("Boost applied – jump +" .. BOOST_AMOUNT .. ", speed x" .. SPEED_MULTIPLIER)
-    else
-        hum.WalkSpeed = originalWalkSpeed
-        print("Boost disabled – speed restored")
     end
+end
+
+local function applyBoostFull(character)
+    if not character then return end
+    applySpeed(character)
+    applyBoostJump(character)
 end
 
 CreateReliableToggle(M, "Superhuman Boost", function(v)
     boostEnabled = v
     local char = LP.Character
     if char then
-        applyBoost(char)
+        applyBoostFull(char)
+        -- Start/stop the speed loop
+        if v then
+            setupSpeedLoop(char)
+        else
+            if speedLoopConnection then
+                speedLoopConnection:Disconnect()
+                speedLoopConnection = nil
+            end
+            -- Force reset speed once
+            applySpeed(char)
+        end
     end
 end)
 
 LP.CharacterAdded:Connect(function(ch)
     task.wait(0.2)
     if boostEnabled then
-        applyBoost(ch)
+        applyBoostFull(ch)
+        setupSpeedLoop(ch)
     else
-        if boostConnection then
-            boostConnection:Disconnect()
-            boostConnection = nil
+        if speedLoopConnection then
+            speedLoopConnection:Disconnect()
+            speedLoopConnection = nil
         end
-        local hum = ch:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.WalkSpeed = originalWalkSpeed
-        end
+        applySpeed(ch)
     end
 end)
 
+-- Initial apply
 task.wait(0.3)
 local char = LP.Character
 if char then
-    applyBoost(char)
+    applyBoostFull(char)
+    if boostEnabled then
+        setupSpeedLoop(char)
+    end
 end
 
 -- ===== 2. Auto Shiftlock =====
@@ -651,4 +691,4 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
-print("JHub FINAL loaded – compact UI, no extra space, title cleaned.")
+print("JHub FINAL loaded – Superhuman Boost speed forced every frame.")
