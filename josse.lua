@@ -1,3 +1,4 @@
+-- JHubV6 – All Features + Jump Boost (1.0)
 local success, err = pcall(function()
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
@@ -7,37 +8,28 @@ local success, err = pcall(function()
     local LP = Players.LocalPlayer
     local C = workspace.CurrentCamera
     
-    -- Delta iOS: PlayerGui might not exist yet, wait for it
+    -- Wait for PlayerGui
     local PG
-    local attempts = 0
-    repeat
-        PG = LP:FindFirstChild("PlayerGui")
-        attempts = attempts + 1
-        if not PG then task.wait(0.1) end
-    until PG or attempts > 50
-    
-    if not PG then
-        warn("JHubV6: PlayerGui not found after 5 seconds!")
-        return
-    end
-    
-    -- Delta iOS: Destroy existing safely
-    local existing = PG:FindFirstChild("JHubV6")
-    if existing then
-        pcall(function() existing:Destroy() end)
+    for i = 1, 50 do
         task.wait(0.1)
+        PG = LP:FindFirstChild("PlayerGui")
+        if PG then break end
     end
+    if not PG then warn("PlayerGui not found") return end
+    
+    -- Destroy old UI
+    local existing = PG:FindFirstChild("JHubV6")
+    if existing then pcall(existing.Destroy, existing) end
 
     local SL, FaceESP, ActiveBeams, JP, TD, JT = false, false, {}, false, nil, nil
     
-    -- Delta iOS: Create ScreenGui with specific properties
     local UI = Instance.new("ScreenGui")
     UI.Name = "JHubV6"
     UI.ResetOnSpawn = false
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     UI.Parent = PG
 
-    -- Constants
+    -- Colors
     local ACCENT = Color3.fromRGB(235, 35, 75)
     local BG_DARK = Color3.fromRGB(12, 12, 15)
     local BG_PANEL = Color3.fromRGB(18, 18, 22)
@@ -47,10 +39,10 @@ local success, err = pcall(function()
     local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
     local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
-    -- Main Frame (height increased to fit all elements)
+    -- Main Frame (tall enough for all toggles)
     local M = Instance.new("Frame")
-    M.Size = UDim2.new(0, 220, 0, 310)  -- was 210
-    M.Position = UDim2.new(0.05, 0, 0.3, 0)
+    M.Size = UDim2.new(0, 240, 0, 420)
+    M.Position = UDim2.new(0.5, -120, 0.5, -210)
     M.BackgroundColor3 = BG_DARK
     M.BackgroundTransparency = 0.08
     M.Active = true
@@ -61,7 +53,7 @@ local success, err = pcall(function()
     M.Parent = UI
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = M
 
     local S = Instance.new("UIStroke")
@@ -69,17 +61,16 @@ local success, err = pcall(function()
     S.Thickness = 1.2
     S.Parent = M
 
-    -- Padding
+    -- Padding and Layout
     local MP = Instance.new("UIPadding")
-    MP.PaddingLeft = UDim.new(0, 10)
-    MP.PaddingRight = UDim.new(0, 10)
-    MP.PaddingTop = UDim.new(0, 8)
-    MP.PaddingBottom = UDim.new(0, 8)
+    MP.PaddingLeft = UDim.new(0, 12)
+    MP.PaddingRight = UDim.new(0, 12)
+    MP.PaddingTop = UDim.new(0, 10)
+    MP.PaddingBottom = UDim.new(0, 10)
     MP.Parent = M
 
-    -- Layout
     local L = Instance.new("UIListLayout")
-    L.Padding = UDim.new(0, 6)
+    L.Padding = UDim.new(0, 8)
     L.HorizontalAlignment = Enum.HorizontalAlignment.Center
     L.VerticalAlignment = Enum.VerticalAlignment.Top
     L.Parent = M
@@ -97,23 +88,23 @@ local success, err = pcall(function()
 
     -- Title
     local Tl = Instance.new("TextLabel")
-    Tl.Size = UDim2.new(1, 0, 0, 16)
+    Tl.Size = UDim2.new(1, 0, 0, 20)
     Tl.Text = "JOSSERPOPSIER"
     Tl.TextColor3 = TEXT_PRIMARY
-    Tl.TextSize = 12
+    Tl.TextSize = 14
     Tl.Font = Enum.Font.GothamBold
     Tl.BackgroundTransparency = 1
     Tl.TextXAlignment = Enum.TextXAlignment.Center
     Tl.Parent = M
 
-    -- Toggle Button (HIDE/SHOW)
+    -- Hide/Show Button (floating)
     local Tg = Instance.new("TextButton")
-    Tg.Size = UDim2.new(0, 65, 0, 24)
-    Tg.Position = UDim2.new(1, -85, 0, 45)
+    Tg.Size = UDim2.new(0, 70, 0, 26)
+    Tg.Position = UDim2.new(1, -90, 0, 50)
     Tg.Text = "HIDE"
     Tg.TextColor3 = TEXT_PRIMARY
     Tg.Font = Enum.Font.GothamBold
-    Tg.TextSize = 9
+    Tg.TextSize = 10
     Tg.BackgroundColor3 = BG_DARK
     Tg.Visible = false
     Tg.AutoButtonColor = false
@@ -123,7 +114,6 @@ local success, err = pcall(function()
     local tgCorner = Instance.new("UICorner")
     tgCorner.CornerRadius = UDim.new(0, 5)
     tgCorner.Parent = Tg
-
     local TgS = Instance.new("UIStroke")
     TgS.Color = ACCENT
     TgS.Thickness = 1
@@ -138,7 +128,6 @@ local success, err = pcall(function()
     Tg.Active = true
     local draggingTg = false
     local dragStartTg, startPosTg
-
     Tg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingTg = true
@@ -151,7 +140,6 @@ local success, err = pcall(function()
             end)
         end
     end)
-
     Tg.InputChanged:Connect(function(input)
         if draggingTg and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStartTg
@@ -161,7 +149,6 @@ local success, err = pcall(function()
             Tg.Position = UDim2.new(0, newX, 0, newY)
         end
     end)
-
     C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         local vs = C.ViewportSize
         local newX = math.clamp(Tg.AbsolutePosition.X, 0, vs.X - Tg.AbsoluteSize.X)
@@ -172,42 +159,37 @@ local success, err = pcall(function()
     -- Toggle Row Template
     local function CreateToggleRow(parent, text, callback)
         local Cd = Instance.new("Frame")
-        Cd.Size = UDim2.new(1, 0, 0, 30)
+        Cd.Size = UDim2.new(1, 0, 0, 34)
         Cd.BackgroundColor3 = BG_PANEL
         Cd.BorderSizePixel = 0
         Cd.Parent = parent
-
         local cdCorner = Instance.new("UICorner")
         cdCorner.CornerRadius = UDim.new(0, 5)
         cdCorner.Parent = Cd
-        
         local Lb = Instance.new("TextLabel")
-        Lb.Size = UDim2.new(1, -70, 1, 0)
-        Lb.Position = UDim2.new(0, 10, 0, 0)
+        Lb.Size = UDim2.new(1, -80, 1, 0)
+        Lb.Position = UDim2.new(0, 12, 0, 0)
         Lb.Text = text
         Lb.TextColor3 = TEXT_SECONDARY
-        Lb.TextSize = 11
+        Lb.TextSize = 12
         Lb.Font = Enum.Font.GothamMedium
         Lb.TextXAlignment = Enum.TextXAlignment.Left
         Lb.BackgroundTransparency = 1
         Lb.Parent = Cd
-        
         local B = Instance.new("TextButton")
-        B.Size = UDim2.new(0, 48, 0, 18)
-        B.Position = UDim2.new(1, -58, 0.5, -9)
+        B.Size = UDim2.new(0, 50, 0, 22)
+        B.Position = UDim2.new(1, -60, 0.5, -11)
         B.Text = "OFF"
         B.Font = Enum.Font.GothamBold
-        B.TextSize = 9
+        B.TextSize = 10
         B.BackgroundColor3 = BG_BUTTON
         B.TextColor3 = TEXT_DIM
         B.AutoButtonColor = false
         B.BorderSizePixel = 0
         B.Parent = Cd
-
         local bCorner = Instance.new("UICorner")
         bCorner.CornerRadius = UDim.new(0, 4)
         bCorner.Parent = B
-        
         local st = false
         B.MouseButton1Click:Connect(function()
             st = not st
@@ -216,199 +198,18 @@ local success, err = pcall(function()
             B.TextColor3 = st and TEXT_PRIMARY or TEXT_DIM
             callback(st)
         end)
-        
         return Cd, B
     end
 
-    -- ========== SLIDER ROW TEMPLATE ==========
-    local function CreateSliderRow(parent, text, min, max, default, callback)
-        local Cd = Instance.new("Frame")
-        Cd.Size = UDim2.new(1, 0, 0, 40)
-        Cd.BackgroundColor3 = BG_PANEL
-        Cd.BorderSizePixel = 0
-        Cd.Parent = parent
-
-        local cdCorner = Instance.new("UICorner")
-        cdCorner.CornerRadius = UDim.new(0, 5)
-        cdCorner.Parent = Cd
-        
-        local Lb = Instance.new("TextLabel")
-        Lb.Size = UDim2.new(1, -70, 1, 0)
-        Lb.Position = UDim2.new(0, 10, 0, 0)
-        Lb.Text = text .. ": " .. tostring(default)
-        Lb.TextColor3 = TEXT_SECONDARY
-        Lb.TextSize = 11
-        Lb.Font = Enum.Font.GothamMedium
-        Lb.TextXAlignment = Enum.TextXAlignment.Left
-        Lb.BackgroundTransparency = 1
-        Lb.Parent = Cd
-
-        local Slider = Instance.new("Frame")
-        Slider.Size = UDim2.new(0, 80, 0, 6)
-        Slider.Position = UDim2.new(1, -90, 0.5, -3)
-        Slider.BackgroundColor3 = BG_BUTTON
-        Slider.BorderSizePixel = 0
-        Slider.Parent = Cd
-
-        local sliderCorner = Instance.new("UICorner")
-        sliderCorner.CornerRadius = UDim.new(0, 3)
-        sliderCorner.Parent = Slider
-
-        local Fill = Instance.new("Frame")
-        Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-        Fill.BackgroundColor3 = ACCENT
-        Fill.BorderSizePixel = 0
-        Fill.Parent = Slider
-
-        local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(0, 3)
-        fillCorner.Parent = Fill
-
-        local Knob = Instance.new("TextButton")
-        Knob.Size = UDim2.new(0, 10, 0, 10)
-        Knob.Position = UDim2.new((default - min) / (max - min), -5, 0.5, -5)
-        Knob.BackgroundColor3 = TEXT_PRIMARY
-        Knob.BorderSizePixel = 0
-        Knob.Text = ""
-        Knob.Parent = Slider
-
-        local knobCorner = Instance.new("UICorner")
-        knobCorner.CornerRadius = UDim.new(1, 0)
-        knobCorner.Parent = Knob
-
-        local dragging = false
-        local currentVal = default
-
-        local function updateSlider(input)
-            if not dragging then return end
-            local pos = input.Position.X
-            local sliderX = Slider.AbsolutePosition.X
-            local sliderW = Slider.AbsoluteSize.X
-            local percent = math.clamp((pos - sliderX) / sliderW, 0, 1)
-            local val = min + percent * (max - min)
-            val = math.floor(val + 0.5)
-            currentVal = math.clamp(val, min, max)
-            Fill.Size = UDim2.new((currentVal - min) / (max - min), 0, 1, 0)
-            Knob.Position = UDim2.new((currentVal - min) / (max - min), -5, 0.5, -5)
-            Lb.Text = text .. ": " .. tostring(currentVal)
-            callback(currentVal)
-        end
-
-        Knob.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                updateSlider(input)
-            end
-        end)
-
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                updateSlider(input)
-            end
-        end)
-
-        return Cd, function()
-            return currentVal
-        end
-    end
-
-    local function CE()
-        for _, i in pairs(ActiveBeams) do
-            pcall(function()
-                i.Beam:Destroy()
-                i.A0:Destroy()
-                i.A1:Destroy()
-            end)
-        end
-        table.clear(ActiveBeams)
-    end
-
-    -- Shiftlock (only on PC)
-    CreateToggleRow(M, "Auto Shiftlock", function(v)
-        SL = v
-        if not v then JP, TD = false, nil end
-    end)
-
-    CreateToggleRow(M, "Direction Facing Esp", function(v)
-        FaceESP = v
-        if not v then CE() end
-    end)
-
-    -- ========== JUMP POWER SLIDER ==========
-    local JumpPowerEnabled = false
-    local JumpPowerValue = 60  -- default
-    local originalJumpPower = 50
-
-    local function applyJumpPower()
-        local char = LP.Character
-        if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
-        if JumpPowerEnabled then
-            hum.JumpPower = JumpPowerValue
-        else
-            hum.JumpPower = originalJumpPower
-        end
-    end
-
-    local jumpSlider, getJumpVal = CreateSliderRow(M, "Jump Power", 50, 80, 60, function(val)
-        JumpPowerValue = val
-        if JumpPowerEnabled then
-            applyJumpPower()
-        end
-    end)
-
-    -- Toggle for Jump Power ON/OFF
-    CreateToggleRow(M, "Jump Power ON", function(v)
-        JumpPowerEnabled = v
-        applyJumpPower()
-    end)
-
-    -- Force loop to keep Jump Power applied (fight server reverts)
-    task.spawn(function()
-        while task.wait(0.5) do
-            if JumpPowerEnabled then
-                local char = LP.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum.JumpPower = JumpPowerValue
-                    end
-                end
-            end
-        end
-    end)
-
-    -- Apply on character respawn
-    LP.CharacterAdded:Connect(function(ch)
-        task.wait(0.3)
-        if JumpPowerEnabled then
-            local hum = ch:FindFirstChildOfClass("Humanoid")
-            if hum then
-                originalJumpPower = hum.JumpPower
-                hum.JumpPower = JumpPowerValue
-            end
-        end
-    end)
-
-    -- ========== ANTI-LAG SYSTEM (Preserves UI, only optimises graphics) ==========
+    -- ========== ANTI-LAG FUNCTIONS ==========
     local AntiLagEnabled = false
     local OriginalStates = {}
     local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
-    local SavedRenderQuality = nil
-    local SavedQualityLevel = nil
+    local SavedRenderQuality, SavedQualityLevel = nil, nil
 
     local function IsESPDown(obj)
         for _, entry in pairs(ActiveBeams) do
-            if entry.Beam == obj then
-                return true
-            end
+            if entry.Beam == obj then return true end
         end
         return false
     end
@@ -420,9 +221,7 @@ local success, err = pcall(function()
             state.Material = obj.Material
             state.Color = obj.Color
             state.Reflectance = obj.Reflectance
-            if obj:IsA("MeshPart") then
-                state.TextureID = obj.TextureID
-            end
+            if obj:IsA("MeshPart") then state.TextureID = obj.TextureID end
         elseif obj:IsA("Texture") or obj:IsA("Decal") then
             state.Texture = obj.Texture
             state.Transparency = obj.Transparency
@@ -444,31 +243,18 @@ local success, err = pcall(function()
 
     local function ApplyAntiLag()
         local lighting = game:GetService("Lighting")
-        
         local sky = lighting:FindFirstChildOfClass("Sky")
-        if sky and not SavedSkybox then
-            SavedSkybox = sky:Clone()
-            sky.Parent = nil
-        end
-        
+        if sky and not SavedSkybox then SavedSkybox = sky:Clone(); sky.Parent = nil end
         local atm = lighting:FindFirstChildOfClass("Atmosphere")
-        if atm and not SavedAtmosphere then
-            SavedAtmosphere = atm:Clone()
-            atm.Parent = nil
-        end
-        
+        if atm and not SavedAtmosphere then SavedAtmosphere = atm:Clone(); atm.Parent = nil end
         for _, cloud in ipairs(lighting:GetChildren()) do
-            if cloud:IsA("Clouds") then
-                pcall(function() cloud.Parent = nil end)
-            end
+            if cloud:IsA("Clouds") then pcall(function() cloud.Parent = nil end) end
         end
-        
         for _, effect in ipairs(lighting:GetChildren()) do
             if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
                 pcall(function() effect.Enabled = false end)
             end
         end
-        
         pcall(function()
             lighting.Ambient = Color3.fromRGB(128, 128, 128)
             lighting.Brightness = 2
@@ -476,7 +262,6 @@ local success, err = pcall(function()
             lighting.ColorShift_Top = Color3.fromRGB(128, 128, 128)
             lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
         end)
-        
         pcall(function()
             if not SavedLightingTech then
                 SavedLightingTech = lighting.Technology
@@ -485,35 +270,27 @@ local success, err = pcall(function()
             lighting.Technology = Enum.Technology.Compatibility
             lighting.GlobalShadows = false
         end)
-        
         pcall(function()
             if settings() and settings().Rendering then
-                if not SavedQualityLevel then
-                    SavedQualityLevel = settings().Rendering.QualityLevel
-                end
+                if not SavedQualityLevel then SavedQualityLevel = settings().Rendering.QualityLevel end
                 settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
             end
         end)
         pcall(function()
             if UserSettings() and UserSettings().GameSettings then
-                if not SavedRenderQuality then
-                    SavedRenderQuality = UserSettings().GameSettings.RenderQuality
-                end
+                if not SavedRenderQuality then SavedRenderQuality = UserSettings().GameSettings.RenderQuality end
                 UserSettings().GameSettings.RenderQuality = 0
             end
         end)
-        
+
         for _, obj in ipairs(workspace:GetDescendants()) do
             pcall(function()
                 if obj:IsA("Beam") and IsESPDown(obj) then return end
-                
                 if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                     SaveOriginalState(obj)
                     obj.Material = Enum.Material.Plastic
                     obj.Reflectance = 0
-                    if obj:IsA("MeshPart") then
-                        obj.TextureID = ""
-                    end
+                    if obj:IsA("MeshPart") then obj.TextureID = "" end
                 elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
                     SaveOriginalState(obj)
                     obj.Transparency = 1
@@ -525,7 +302,6 @@ local success, err = pcall(function()
                 elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
                     SaveOriginalState(obj)
                     obj.Enabled = false
-                -- We do NOT hide BillboardGui, SurfaceGui, or ScreenGui – keep UI visible
                 elseif obj:IsA("Sound") then
                     SaveOriginalState(obj)
                     obj.Playing = false
@@ -536,9 +312,7 @@ local success, err = pcall(function()
                 end
             end)
         end
-        
-        -- No longer hiding other ScreenGuis – removed that block
-        
+
         pcall(function()
             for _, sound in ipairs(game:GetDescendants()) do
                 if sound:IsA("Sound") then
@@ -548,7 +322,7 @@ local success, err = pcall(function()
                 end
             end
         end)
-        
+
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -563,39 +337,20 @@ local success, err = pcall(function()
 
     local function RestoreOriginal()
         local lighting = game:GetService("Lighting")
-        
-        if SavedSkybox then
-            pcall(function() SavedSkybox.Parent = lighting end)
-            SavedSkybox = nil
-        end
-        
-        if SavedAtmosphere then
-            pcall(function() SavedAtmosphere.Parent = lighting end)
-            SavedAtmosphere = nil
-        end
-        
+        if SavedSkybox then pcall(function() SavedSkybox.Parent = lighting end); SavedSkybox = nil end
+        if SavedAtmosphere then pcall(function() SavedAtmosphere.Parent = lighting end); SavedAtmosphere = nil end
         pcall(function()
-            if SavedLightingTech then
-                lighting.Technology = SavedLightingTech
-                SavedLightingTech = nil
-            end
-            if SavedGlobalShadows ~= nil then
-                lighting.GlobalShadows = SavedGlobalShadows
-                SavedGlobalShadows = nil
-            end
+            if SavedLightingTech then lighting.Technology = SavedLightingTech; SavedLightingTech = nil end
+            if SavedGlobalShadows ~= nil then lighting.GlobalShadows = SavedGlobalShadows; SavedGlobalShadows = nil end
         end)
-        
         pcall(function()
             if settings() and settings().Rendering and SavedQualityLevel then
-                settings().Rendering.QualityLevel = SavedQualityLevel
-                SavedQualityLevel = nil
+                settings().Rendering.QualityLevel = SavedQualityLevel; SavedQualityLevel = nil
             end
             if UserSettings() and UserSettings().GameSettings and SavedRenderQuality ~= nil then
-                UserSettings().GameSettings.RenderQuality = SavedRenderQuality
-                SavedRenderQuality = nil
+                UserSettings().GameSettings.RenderQuality = SavedRenderQuality; SavedRenderQuality = nil
             end
         end)
-        
         for obj, state in pairs(OriginalStates) do
             pcall(function()
                 if obj:IsA("BasePart") then
@@ -621,7 +376,6 @@ local success, err = pcall(function()
                 end
             end)
         end
-        
         pcall(function()
             local terrain = workspace:FindFirstChildOfClass("Terrain")
             if terrain then
@@ -632,31 +386,110 @@ local success, err = pcall(function()
                 terrain.WaterWaveSpeed = 10
             end
         end)
-        
         OriginalStates = {}
     end
 
+    -- ========== FACE ESP CLEANUP ==========
+    local function CE()
+        for _, i in pairs(ActiveBeams) do
+            pcall(function()
+                i.Beam:Destroy()
+                i.A0:Destroy()
+                i.A1:Destroy()
+            end)
+        end
+        table.clear(ActiveBeams)
+    end
+
+    -- ========== TOGGLES ==========
+    CreateToggleRow(M, "Auto Shiftlock", function(v)
+        SL = v
+        if not v then JP, TD = false, nil end
+    end)
+
+    CreateToggleRow(M, "Direction Facing Esp", function(v)
+        FaceESP = v
+        if not v then CE() end
+    end)
+
     CreateToggleRow(M, "Anti-Lag", function(v)
         AntiLagEnabled = v
-        if v then
-            ApplyAntiLag()
-            print("[JHubV6] Anti‑Lag ON (Graphics only, UI preserved)")
-        else
-            RestoreOriginal()
-            print("[JHubV6] Anti‑Lag OFF")
+        if v then ApplyAntiLag() else RestoreOriginal() end
+    end)
+
+    -- ========== JUMP BOOST (1.0) ==========
+    local JumpBoostEnabled = false
+    local BOOST_AMOUNT = 1.0  -- Change this if you want
+
+    local function applyJumpBoost(character)
+        if not character then return end
+        local hum = character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        if hum._boostConn then
+            hum._boostConn:Disconnect()
+            hum._boostConn = nil
+        end
+        hum._boostConn = hum.Jumping:Connect(function()
+            if not JumpBoostEnabled then return end
+            local root = character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local vel = root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity = vel + Vector3.new(0, BOOST_AMOUNT, 0)
+                -- Optional: slightly increase JumpPower for smoother feel
+                if hum.JumpPower < 60 then
+                    hum.JumpPower = 55
+                end
+            end
+        end)
+    end
+
+    CreateToggleRow(M, "Jump Boost (1.0)", function(v)
+        JumpBoostEnabled = v
+        local char = LP.Character
+        if char then
+            if v then
+                applyJumpBoost(char)
+            else
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum and hum._boostConn then
+                    hum._boostConn:Disconnect()
+                    hum._boostConn = nil
+                end
+            end
         end
     end)
 
-    -- ==================== LEAD FEET SYSTEM ====================
-    local LeadFeetEnabled = false
+    -- Apply Jump Boost on respawn and initial
+    LP.CharacterAdded:Connect(function(ch)
+        task.wait(0.2)
+        if JumpBoostEnabled then applyJumpBoost(ch) end
+    end)
 
+    task.wait(0.3)
+    local char = LP.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum._boostConn = hum.Jumping:Connect(function()
+                if not JumpBoostEnabled then return end
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local vel = root.AssemblyLinearVelocity
+                    root.AssemblyLinearVelocity = vel + Vector3.new(0, BOOST_AMOUNT, 0)
+                end
+            end)
+        end
+    end
+
+    -- ========== LEAD FEET ==========
+    local LeadFeetEnabled = false
     local LFBtn = Instance.new("TextButton")
-    LFBtn.Size = UDim2.new(0, 90, 0, 36)
-    LFBtn.Position = UDim2.new(0.5, -45, 0.75, 0)
+    LFBtn.Size = UDim2.new(0, 100, 0, 38)
+    LFBtn.Position = UDim2.new(0.5, -50, 0.8, 0)
     LFBtn.Text = "LEAD FEET"
     LFBtn.TextColor3 = TEXT_PRIMARY
     LFBtn.Font = Enum.Font.GothamBold
-    LFBtn.TextSize = 11
+    LFBtn.TextSize = 12
     LFBtn.BackgroundColor3 = BG_DARK
     LFBtn.Visible = false
     LFBtn.AutoButtonColor = false
@@ -667,7 +500,6 @@ local success, err = pcall(function()
     local lfCorner = Instance.new("UICorner")
     lfCorner.CornerRadius = UDim.new(0, 6)
     lfCorner.Parent = LFBtn
-
     local lfStroke = Instance.new("UIStroke")
     lfStroke.Color = ACCENT
     lfStroke.Thickness = 1.4
@@ -675,7 +507,6 @@ local success, err = pcall(function()
 
     local draggingLF = false
     local dragStartLF, startPosLF
-
     LFBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingLF = true
@@ -688,7 +519,6 @@ local success, err = pcall(function()
             end)
         end
     end)
-
     LFBtn.InputChanged:Connect(function(input)
         if draggingLF and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStartLF
@@ -698,7 +528,6 @@ local success, err = pcall(function()
             LFBtn.Position = UDim2.new(0, newX, 0, newY)
         end
     end)
-
     C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         local vs = C.ViewportSize
         local newX = math.clamp(LFBtn.AbsolutePosition.X, 0, vs.X - LFBtn.AbsoluteSize.X)
@@ -709,46 +538,24 @@ local success, err = pcall(function()
     local function ActivateLeadFeet()
         local char = LP.Character
         if not char then return end
-        
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         if not hrp or not humanoid or humanoid.Health <= 0 then return end
-        
         local state = humanoid:GetState()
-        if state ~= Enum.HumanoidStateType.Freefall and 
-           state ~= Enum.HumanoidStateType.Jumping and
-           state ~= Enum.HumanoidStateType.FallingDown then
-            return
-        end
-        
+        if state ~= Enum.HumanoidStateType.Freefall and state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.FallingDown then return end
         local params = RaycastParams.new()
         params.FilterDescendantsInstances = {char}
         params.FilterType = Enum.RaycastFilterType.Exclude
-        
         local result = workspace:Raycast(hrp.Position, Vector3.new(0, -200, 0), params)
-        
         if result then
             local targetPos = result.Position + Vector3.new(0, 3, 0)
             local targetCFrame = CFrame.new(targetPos) * CFrame.Angles(0, math.rad(hrp.Orientation.Y), 0)
-            
-            local tweenInfo = TweenInfo.new(
-                0.12,
-                Enum.EasingStyle.Quad,
-                Enum.EasingDirection.Out
-            )
-            
-            local tween = TweenService:Create(hrp, tweenInfo, {
-                CFrame = targetCFrame
-            })
-            
+            local tweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            
             tween:Play()
-            
-            tween.Completed:Connect(function()
-                humanoid:ChangeState(Enum.HumanoidStateType.Landed)
-            end)
+            tween.Completed:Connect(function() humanoid:ChangeState(Enum.HumanoidStateType.Landed) end)
         else
             hrp.AssemblyLinearVelocity = Vector3.new(0, -180, 0)
         end
@@ -761,14 +568,12 @@ local success, err = pcall(function()
         LFBtn.Visible = v
     end)
 
-    -- ==========================================================
-
+    -- ========== AUTO-REAPPLY ANTI-LAG ==========
     workspace.DescendantAdded:Connect(function(obj)
         if not AntiLagEnabled then return end
         task.wait(0.1)
         pcall(function()
             if obj:IsA("Beam") and IsESPDown(obj) then return end
-            
             if obj:IsA("BasePart") and not obj:IsA("Terrain") then
                 SaveOriginalState(obj)
                 obj.Material = Enum.Material.Plastic
@@ -796,7 +601,7 @@ local success, err = pcall(function()
         end)
     end)
 
-    -- Face ESP
+    -- ========== FACE ESP ==========
     local function IT(p)
         if p == LP or (LP.Team and p.Team and LP.Team == p.Team) then return true end
         return false
@@ -852,7 +657,7 @@ local success, err = pcall(function()
         end
     end)
 
-    -- Init screen
+    -- ========== INIT SCREEN ==========
     task.spawn(function()
         local It = Instance.new("Frame")
         It.Size = UDim2.new(0, 180, 0, 35)
@@ -864,13 +669,11 @@ local success, err = pcall(function()
         local itCorner = Instance.new("UICorner")
         itCorner.CornerRadius = UDim.new(0, 6)
         itCorner.Parent = It
-        
         local IS = Instance.new("UIStroke")
         IS.Color = ACCENT
         IS.Thickness = 1.2
         IS.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         IS.Parent = It
-        
         local Lb = Instance.new("TextLabel")
         Lb.Size = UDim2.new(1, 0, 0, 14)
         Lb.Position = UDim2.new(0, 0, 0, 5)
@@ -880,56 +683,46 @@ local success, err = pcall(function()
         Lb.Font = Enum.Font.GothamBold
         Lb.BackgroundTransparency = 1
         Lb.Parent = It
-        
         local BB = Instance.new("Frame")
         BB.Size = UDim2.new(1, -24, 0, 2)
         BB.Position = UDim2.new(0, 12, 1, -10)
         BB.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
         BB.BorderSizePixel = 0
         BB.Parent = It
-
         local bbCorner = Instance.new("UICorner")
         bbCorner.CornerRadius = UDim.new(1, 0)
         bbCorner.Parent = BB
-        
         local BF = Instance.new("Frame")
         BF.Size = UDim2.new(0, 0, 1, 0)
         BF.BackgroundColor3 = ACCENT
         BF.BorderSizePixel = 0
         BF.Parent = BB
-
         local bfCorner = Instance.new("UICorner")
         bfCorner.CornerRadius = UDim.new(1, 0)
         bfCorner.Parent = BF
-        
         local G = Instance.new("UIGradient")
         G.Color = ColorSequence.new(ACCENT, Color3.fromRGB(255, 80, 120))
         G.Parent = BF
-        
         TweenService:Create(BF, TweenInfo.new(1.8, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
-        
         task.wait(2.0)
-        
         local o = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         TweenService:Create(It, o, {BackgroundTransparency = 1}):Play()
         TweenService:Create(IS, o, {Transparency = 1}):Play()
         TweenService:Create(BB, o, {BackgroundTransparency = 1}):Play()
         TweenService:Create(BF, o, {BackgroundTransparency = 1}):Play()
         TweenService:Create(Lb, o, {TextTransparency = 1}):Play()
-        
         task.wait(0.25)
-        pcall(function() It:Destroy() end)
+        pcall(It.Destroy, It)
         M.Visible = true
         Tg.Visible = true
         Clamp()
     end)
 
-    -- Shiftlock (only if not on mobile)
+    -- ========== SHIFTLOCK ==========
     local function SU(ch)
         local hm = ch:WaitForChild("Humanoid")
         hm.Jumping:Connect(function()
             if not SL then return end
-            if UserInputService.TouchEnabled then return end -- don't lock on mobile
             if JT then task.cancel(JT) end
             local l = C.CFrame.LookVector
             TD, JP = Vector3.new(l.X, 0, l.Z).Unit, true
@@ -950,18 +743,19 @@ local success, err = pcall(function()
     LP.CharacterAdded:Connect(SU)
 
     RunService.RenderStepped:Connect(function()
-        -- Shiftlock only works on PC (not touch)
-        if not SL or not JP or not TD or UserInputService.TouchEnabled then return end
+        if not SL or not JP or not TD then return end
         local ch = LP.Character
         local rt, hm = ch and ch:FindFirstChild("HumanoidRootPart"), ch and ch:FindFirstChildOfClass("Humanoid")
         if rt and hm and hm.Health > 0 then
-            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+            if not UserInputService.TouchEnabled then
+                UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+            end
             rt.CFrame = CFrame.new(rt.Position, rt.Position + TD)
             hm.CameraOffset = hm.CameraOffset:LinearInterpolate(Vector3.new(2.5, 2, 0), 0.2)
         end
     end)
 
-    print("JHubV6 loaded successfully!")
+    print("JHubV6 loaded – all features + Jump Boost (1.0) working.")
 end)
 
 if not success then
