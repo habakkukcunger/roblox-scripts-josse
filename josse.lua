@@ -1,4 +1,5 @@
-print("=== JHub (Speed disabled in air) ===")
+-- JHub – All Features + Async Desync with Slider (0.05–1.0s)
+-- You can adjust the desync duration with a slider, and type a custom value.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -39,8 +40,8 @@ local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
 -- ===== Main Frame =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 240, 0, 300)
-M.Position = UDim2.new(0.5, -120, 0.5, -150)
+M.Size = UDim2.new(0, 240, 0, 360) -- increased height for slider
+M.Position = UDim2.new(0.5, -120, 0.5, -180)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.08
 M.Active = true
@@ -233,7 +234,161 @@ local function CreateReliableToggle(parent, labelText, callback)
     }
 end
 
--- ===== 1. Superhuman Boost (Speed disabled in air) =====
+-- ===== Helper: Slider with Text Input =====
+local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 50)
+    row.BackgroundColor3 = BG_PANEL
+    row.BorderSizePixel = 0
+    row.Parent = parent
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    rowCorner.Parent = row
+
+    -- Label (top)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 0, 20)
+    label.Position = UDim2.new(0, 12, 0, 2)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = TEXT_SECONDARY
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = row
+
+    -- Value display (right)
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = string.format("%.2f", default) .. "s"
+    valueLabel.TextColor3 = TEXT_PRIMARY
+    valueLabel.TextSize = 12
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = row
+
+    -- Description
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, 0, 0, 14)
+    descLabel.Position = UDim2.new(0, 12, 0, 22)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = desc or ""
+    descLabel.TextColor3 = TEXT_DIM
+    descLabel.TextSize = 10
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.Parent = row
+
+    -- Slider
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(0, 130, 0, 6)
+    sliderBg.Position = UDim2.new(0, 12, 0, 38)
+    sliderBg.BackgroundColor3 = BG_BUTTON
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Parent = row
+    local sliderBgCorner = Instance.new("UICorner")
+    sliderBgCorner.CornerRadius = UDim.new(0, 3)
+    sliderBgCorner.Parent = sliderBg
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = ACCENT
+    fill.BorderSizePixel = 0
+    fill.Parent = sliderBg
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = fill
+
+    local knob = Instance.new("TextButton")
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7)
+    knob.BackgroundColor3 = TEXT_PRIMARY
+    knob.BorderSizePixel = 0
+    knob.Text = ""
+    knob.Parent = sliderBg
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = knob
+
+    -- Text input
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(0, 50, 0, 20)
+    input.Position = UDim2.new(1, -62, 0, 36)
+    input.BackgroundColor3 = BG_BUTTON
+    input.BorderSizePixel = 0
+    input.Text = string.format("%.2f", default)
+    input.TextColor3 = TEXT_PRIMARY
+    input.TextSize = 12
+    input.Font = Enum.Font.GothamBold
+    input.TextXAlignment = Enum.TextXAlignment.Center
+    input.ClearTextOnFocus = false
+    input.Parent = row
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 4)
+    inputCorner.Parent = input
+
+    local currentVal = default
+    local dragging = false
+
+    local function updateUI(val)
+        val = math.clamp(val, min, max)
+        val = math.floor(val * 100 + 0.5) / 100
+        currentVal = val
+        local percent = (val - min) / (max - min)
+        fill.Size = UDim2.new(percent, 0, 1, 0)
+        knob.Position = UDim2.new(percent, -7, 0.5, -7)
+        valueLabel.Text = string.format("%.2f", val) .. "s"
+        input.Text = string.format("%.2f", val)
+        callback(val)
+    end
+
+    knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            local pos = input.Position
+            local sliderX = sliderBg.AbsolutePosition.X
+            local sliderW = sliderBg.AbsoluteSize.X
+            local percent = math.clamp((pos.X - sliderX) / sliderW, 0, 1)
+            local val = min + percent * (max - min)
+            updateUI(val)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = input.Position
+            local sliderX = sliderBg.AbsolutePosition.X
+            local sliderW = sliderBg.AbsoluteSize.X
+            local percent = math.clamp((pos.X - sliderX) / sliderW, 0, 1)
+            local val = min + percent * (max - min)
+            updateUI(val)
+        end
+    end)
+
+    input.FocusLost:Connect(function()
+        local val = tonumber(input.Text)
+        if val then
+            updateUI(val)
+        else
+            input.Text = string.format("%.2f", currentVal)
+        end
+    end)
+
+    return {
+        getValue = function() return currentVal end,
+        setValue = updateUI
+    }
+end
+
+-- ===== 1. Superhuman Boost =====
 local boostEnabled = false
 local BOOST_AMOUNT = 1.0
 local SPEED_MULTIPLIER = 1.15
@@ -275,7 +430,6 @@ local function setupSpeedLogic(character)
         originalWalkSpeed = hum.WalkSpeed
     end
 
-    -- Remove old connections
     if stateConnection then
         stateConnection:Disconnect()
         stateConnection = nil
@@ -285,17 +439,13 @@ local function setupSpeedLogic(character)
         speedLoopConnection = nil
     end
 
-    -- State changed handler
     stateConnection = hum.StateChanged:Connect(onStateChanged)
-
-    -- Speed loop (fallback to force speed)
     speedLoopConnection = RunService.Heartbeat:Connect(function()
         if hum and hum.Parent then
             applySpeedBasedOnState(hum)
         end
     end)
 
-    -- Initial apply
     applySpeedBasedOnState(hum)
 end
 
@@ -332,8 +482,6 @@ CreateReliableToggle(M, "Superhuman Boost", function(v)
     local char = LP.Character
     if char then
         applyBoostFull(char)
-    else
-        -- Character not loaded yet, will be handled on CharacterAdded
     end
 end)
 
@@ -342,7 +490,6 @@ LP.CharacterAdded:Connect(function(ch)
     if boostEnabled then
         applyBoostFull(ch)
     else
-        -- Clean up if boost off
         if stateConnection then
             stateConnection:Disconnect()
             stateConnection = nil
@@ -362,7 +509,6 @@ LP.CharacterAdded:Connect(function(ch)
     end
 end)
 
--- Initial apply if character exists
 task.wait(0.3)
 local char = LP.Character
 if char then
@@ -691,10 +837,10 @@ CreateReliableToggle(M, "Anti-Lag", function(v)
     if v then ApplyAntiLag() else RestoreOriginal() end
 end)
 
--- ===== 5. Async Desync =====
+-- ===== 5. Async Desync with Slider =====
 local asyncDesyncEnabled = false
 local asyncConnection = nil
-local ASYNC_COOLDOWN = 0.3
+local ASYNC_COOLDOWN = 0.3  -- default, will be overwritten by slider
 
 local function applyDesync(state)
     local bandwidth = state and "1" or "999999"
@@ -722,7 +868,8 @@ local function setupAsyncDesync(char)
     end
 end
 
-CreateReliableToggle(M, "Async Desync", function(v)
+-- Create the toggle
+local asyncToggle = CreateReliableToggle(M, "Async Desync", function(v)
     asyncDesyncEnabled = v
     local char = LP.Character
     if char then
@@ -738,6 +885,21 @@ CreateReliableToggle(M, "Async Desync", function(v)
     end
 end)
 
+-- Create the slider
+local sliderObj = CreateSliderWithInput(
+    M,
+    "Desync Duration",
+    0.05,  -- min
+    1.0,   -- max
+    0.3,   -- default
+    "0.3s is recommended",
+    function(val)
+        ASYNC_COOLDOWN = val
+        print("Desync duration set to: " .. string.format("%.2f", val) .. "s")
+    end
+)
+
+-- Apply on respawn
 LP.CharacterAdded:Connect(function(ch)
     task.wait(0.2)
     if asyncDesyncEnabled then
@@ -785,4 +947,4 @@ workspace.DescendantAdded:Connect(function(obj)
     end)
 end)
 
-print("JHub loaded – Superhuman Boost speed now disables in air.")
+print("JHub loaded – Async Desync slider added. 0.3s is recommended.")
