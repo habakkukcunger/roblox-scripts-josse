@@ -32,26 +32,49 @@ local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
--- ===== Main Frame (PILL SHAPE: CornerRadius = half height) =====
+-- ===== Main Frame (rounded rectangle, corner radius = 24) =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 280, 0, 280)   -- width = height to keep proportions, but actually pill needs width > height, but with radius 140 it becomes a circle if width=height. To keep pill shape, height 280, radius 140, so left/right edges will be perfect semicircles, top/bottom straight – still a pill because width 280, the corners will merge and the top/bottom edges will be points? Actually with radius = half height and width > height, the shape becomes a capsule. Here width=280, height=280, radius=140 makes a perfect circle. Let's change to width 300, height 280 to be pill-like. I'll adjust M.Size to UDim2.new(0, 300, 0, 280) and CornerRadius = UDim.new(0, 140). That will make the left/right sides fully rounded, top/bottom straight, resulting in a pill shape.
-M.Size = UDim2.new(0, 300, 0, 280)
-M.Position = UDim2.new(0.5, -150, 0.5, -140)
+M.Size = UDim2.new(0, 360, 0, 320)
+M.Position = UDim2.new(0.5, -180, 0.5, -160)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.05
 M.Active = true
-M.Draggable = false   -- we'll handle drag manually for smoothness
+M.Draggable = false
 M.Visible = true
 M.BorderSizePixel = 0
 M.ClipsDescendants = true
 M.Parent = UI
 
--- Pill shape: radius half of height (140)
-Instance.new("UICorner").CornerRadius = UDim.new(0, 140) Parent = M
-local stroke = Instance.new("UIStroke") stroke.Color = ACCENT stroke.Thickness = 1 stroke.Parent = M
-local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.PaddingRight = UDim.new(0, 10) pad.PaddingTop = UDim.new(0, 10) pad.PaddingBottom = UDim.new(0, 10) pad.Parent = M
+-- Rounded rectangle with fixed corner radius (24)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 24)
+corner.Parent = M
 
--- Smooth custom drag for main frame
+local stroke = Instance.new("UIStroke")
+stroke.Color = ACCENT
+stroke.Thickness = 1
+stroke.Parent = M
+
+local pad = Instance.new("UIPadding")
+pad.PaddingLeft = UDim.new(0, 12)
+pad.PaddingRight = UDim.new(0, 12)
+pad.PaddingTop = UDim.new(0, 12)
+pad.PaddingBottom = UDim.new(0, 12)
+pad.Parent = M
+
+-- ===== Title (JOSSEPOPSIER) =====
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0, 200, 0, 30)
+title.Position = UDim2.new(0, 10, 0, 5)
+title.Text = "JOSSEPOPSIER"
+title.TextColor3 = TEXT_PRIMARY
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = M
+
+-- Smooth custom drag for main frame (top clamp = -30)
 local mainDragging = false
 local mainDragStart, mainFrameStart
 M.InputBegan:Connect(function(input)
@@ -65,9 +88,8 @@ M.InputChanged:Connect(function(input)
  if mainDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
   local delta = input.Position - mainDragStart
   local vs = C.ViewportSize
-  -- Clamp with 10px margin from edges
   local newX = math.clamp(mainFrameStart.X.Offset + delta.X, 10, vs.X - M.AbsoluteSize.X - 10)
-  local newY = math.clamp(mainFrameStart.Y.Offset + delta.Y, 10, vs.Y - M.AbsoluteSize.Y - 10)
+  local newY = math.clamp(mainFrameStart.Y.Offset + delta.Y, -30, vs.Y - M.AbsoluteSize.Y - 10)
   M.Position = UDim2.new(0, newX, 0, newY)
  end
 end)
@@ -77,23 +99,28 @@ M.InputEnded:Connect(function(input)
  end
 end)
 
--- Hide button (pill, smooth drag)
+-- Hide button (rounded rectangle, radius 12)
 local hideBtn = Instance.new("TextButton")
-hideBtn.Size = UDim2.new(0, 70, 0, 30)
-hideBtn.Position = UDim2.new(1, -85, 0, 10)
+hideBtn.Size = UDim2.new(0, 75, 0, 32)
+hideBtn.Position = UDim2.new(1, -90, 0, 10)
 hideBtn.Text = "HIDE"
 hideBtn.TextColor3 = TEXT_PRIMARY
 hideBtn.Font = Enum.Font.GothamBold
-hideBtn.TextSize = 12
+hideBtn.TextSize = 13
 hideBtn.BackgroundColor3 = BG_DARK
 hideBtn.Visible = true
 hideBtn.AutoButtonColor = false
 hideBtn.BorderSizePixel = 0
 hideBtn.Parent = UI
 
--- Pill shape for hide button (radius half height)
-Instance.new("UICorner").CornerRadius = UDim.new(0, 15) Parent = hideBtn
-local hStroke = Instance.new("UIStroke") hStroke.Color = ACCENT hStroke.Thickness = 1 hStroke.Parent = hideBtn
+local hideCorner = Instance.new("UICorner")
+hideCorner.CornerRadius = UDim.new(0, 12)
+hideCorner.Parent = hideBtn
+local hStroke = Instance.new("UIStroke")
+hStroke.Color = ACCENT
+hStroke.Thickness = 1
+hStroke.Parent = hideBtn
+
 local hideDragging = false
 local hideDragStart, hideFrameStart
 
@@ -127,38 +154,40 @@ hideBtn.MouseButton1Click:Connect(function()
  hideBtn.Text = M.Visible and "HIDE" or "SHOW"
 end)
 
--- ===== Helpers (tap‑only toggles, pill‑shaped toggle buttons) =====
+-- ===== Helpers (rounded rectangle toggles, radius 12) =====
 local function CreateReliableToggle(parent, labelText, callback)
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 34)
+ row.Size = UDim2.new(1, 0, 0, 36)
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
- Instance.new("UICorner").CornerRadius = UDim.new(0, 17) Parent = row   -- fully rounded row
+ -- radius 12 (moderate rounding)
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 12) Parent = row
 
  local label = Instance.new("TextLabel")
- label.Size = UDim2.new(1, -80, 1, 0)
+ label.Size = UDim2.new(1, -90, 1, 0)
  label.Position = UDim2.new(0, 12, 0, 0)
  label.Text = labelText
  label.TextColor3 = TEXT_SECONDARY
- label.TextSize = 12
+ label.TextSize = 13
  label.Font = Enum.Font.GothamMedium
  label.TextXAlignment = Enum.TextXAlignment.Left
  label.BackgroundTransparency = 1
  label.Parent = row
 
  local btn = Instance.new("TextButton")
- btn.Size = UDim2.new(0, 50, 0, 22)
- btn.Position = UDim2.new(1, -60, 0.5, -11)
+ btn.Size = UDim2.new(0, 56, 0, 24)
+ btn.Position = UDim2.new(1, -66, 0.5, -12)
  btn.Text = "OFF"
  btn.Font = Enum.Font.GothamBold
- btn.TextSize = 10
+ btn.TextSize = 11
  btn.BackgroundColor3 = BG_BUTTON
  btn.TextColor3 = TEXT_DIM
  btn.AutoButtonColor = false
  btn.BorderSizePixel = 0
  btn.Parent = row
- Instance.new("UICorner").CornerRadius = UDim.new(0, 11) Parent = btn   -- pill toggle
+ -- radius 8 for the toggle button itself
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 8) Parent = btn
 
  local enabled = false
  local debounce = false
@@ -183,7 +212,6 @@ local function CreateReliableToggle(parent, labelText, callback)
   debounce = false
  end
 
- -- Only tap (no slide)
  btn.MouseButton1Click:Connect(toggle)
  btn.TouchTap:Connect(toggle)
 
@@ -196,63 +224,64 @@ end
 
 local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback)
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 50)
+ row.Size = UDim2.new(1, 0, 0, 60)
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
- Instance.new("UICorner").CornerRadius = UDim.new(0, 17) Parent = row
+ -- radius 12 (moderate)
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 12) Parent = row
 
  local label = Instance.new("TextLabel")
- label.Size = UDim2.new(0.6, 0, 0, 20)
+ label.Size = UDim2.new(0.6, 0, 0, 22)
  label.Position = UDim2.new(0, 12, 0, 2)
  label.BackgroundTransparency = 1
  label.Text = labelText
  label.TextColor3 = TEXT_SECONDARY
- label.TextSize = 12
+ label.TextSize = 14
  label.Font = Enum.Font.GothamMedium
  label.TextXAlignment = Enum.TextXAlignment.Left
  label.Parent = row
 
  local valueLabel = Instance.new("TextLabel")
- valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
+ valueLabel.Size = UDim2.new(0.3, 0, 0, 22)
  valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
  valueLabel.BackgroundTransparency = 1
  valueLabel.Text = string.format("%.2f", default) .. "s"
  valueLabel.TextColor3 = TEXT_PRIMARY
- valueLabel.TextSize = 12
+ valueLabel.TextSize = 14
  valueLabel.Font = Enum.Font.GothamBold
  valueLabel.TextXAlignment = Enum.TextXAlignment.Right
  valueLabel.Parent = row
 
  local descLabel = Instance.new("TextLabel")
- descLabel.Size = UDim2.new(1, 0, 0, 14)
- descLabel.Position = UDim2.new(0, 12, 0, 22)
+ descLabel.Size = UDim2.new(1, 0, 0, 16)
+ descLabel.Position = UDim2.new(0, 12, 0, 24)
  descLabel.BackgroundTransparency = 1
  descLabel.Text = desc or ""
  descLabel.TextColor3 = TEXT_DIM
- descLabel.TextSize = 10
+ descLabel.TextSize = 11
  descLabel.Font = Enum.Font.Gotham
  descLabel.TextXAlignment = Enum.TextXAlignment.Left
  descLabel.Parent = row
 
  local sliderBg = Instance.new("Frame")
- sliderBg.Size = UDim2.new(0, 130, 0, 6)
- sliderBg.Position = UDim2.new(0, 12, 0, 38)
+ sliderBg.Size = UDim2.new(0, 180, 0, 8)
+ sliderBg.Position = UDim2.new(0, 12, 0, 44)
  sliderBg.BackgroundColor3 = BG_BUTTON
  sliderBg.BorderSizePixel = 0
  sliderBg.Parent = row
- Instance.new("UICorner").CornerRadius = UDim.new(0, 3) Parent = sliderBg
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 4) Parent = sliderBg
 
  local fill = Instance.new("Frame")
  fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
  fill.BackgroundColor3 = ACCENT
  fill.BorderSizePixel = 0
  fill.Parent = sliderBg
- Instance.new("UICorner").CornerRadius = UDim.new(0, 3) Parent = fill
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 4) Parent = fill
 
  local knob = Instance.new("TextButton")
- knob.Size = UDim2.new(0, 14, 0, 14)
- knob.Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7)
+ knob.Size = UDim2.new(0, 20, 0, 20)
+ knob.Position = UDim2.new((default - min) / (max - min), -10, 0.5, -10)
  knob.BackgroundColor3 = TEXT_PRIMARY
  knob.BorderSizePixel = 0
  knob.Text = ""
@@ -260,18 +289,18 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  Instance.new("UICorner").CornerRadius = UDim.new(1, 0) Parent = knob
 
  local input = Instance.new("TextBox")
- input.Size = UDim2.new(0, 50, 0, 20)
- input.Position = UDim2.new(1, -62, 0, 36)
+ input.Size = UDim2.new(0, 56, 0, 24)
+ input.Position = UDim2.new(1, -68, 0, 40)
  input.BackgroundColor3 = BG_BUTTON
  input.BorderSizePixel = 0
  input.Text = string.format("%.2f", default)
  input.TextColor3 = TEXT_PRIMARY
- input.TextSize = 12
+ input.TextSize = 13
  input.Font = Enum.Font.GothamBold
  input.TextXAlignment = Enum.TextXAlignment.Center
  input.ClearTextOnFocus = false
  input.Parent = row
- Instance.new("UICorner").CornerRadius = UDim.new(0, 4) Parent = input
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 5) Parent = input
 
  local currentVal = default
  local dragging = false
@@ -282,7 +311,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
   currentVal = val
   local percent = (val - min) / (max - min)
   fill.Size = UDim2.new(percent, 0, 1, 0)
-  knob.Position = UDim2.new(percent, -7, 0.5, -7)
+  knob.Position = UDim2.new(percent, -10, 0.5, -10)
   valueLabel.Text = string.format("%.2f", val) .. "s"
   input.Text = string.format("%.2f", val)
   callback(val)
@@ -323,21 +352,22 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  return { getValue = function() return currentVal end, setValue = updateUI }
 end
 
--- ===== LEFT TAB SYSTEM =====
+-- ===== LEFT TAB SYSTEM (shifted down for title) =====
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(0, 65, 1, 0)
+tabContainer.Size = UDim2.new(0, 70, 0, 285)   -- height reduced
+tabContainer.Position = UDim2.new(0, 0, 0, 35) -- start below title
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = M
 
 local contentArea = Instance.new("Frame")
-contentArea.Size = UDim2.new(1, -73, 1, 0)
-contentArea.Position = UDim2.new(0, 73, 0, 0)
+contentArea.Size = UDim2.new(1, -80, 0, 285)   -- height reduced
+contentArea.Position = UDim2.new(0, 80, 0, 35) -- start below title
 contentArea.BackgroundTransparency = 1
 contentArea.BorderSizePixel = 0
 contentArea.Parent = M
 
 local contentLayout = Instance.new("UIListLayout")
-contentLayout.Padding = UDim.new(0, 6)
+contentLayout.Padding = UDim.new(0, 8)
 contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 contentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 contentLayout.Parent = contentArea
@@ -351,7 +381,7 @@ local function clearContent()
  end
 end
 
--- ===== PERSISTENT RANKED LOOP (global, fixed 3s delay) =====
+-- ===== PERSISTENT RANKED LOOP =====
 local rankedEnabled = { style = false, yen = false, ability = false }
 local rankedLoopActive = false
 local RANKED_FIXED_DELAY = 3.0
@@ -840,21 +870,21 @@ local function switchTab(tabName)
  elseif tabName == "Automation" then buildAutomationTab() end
 end
 
--- Left tab buttons (pill-shaped)
+-- Left tab buttons (rounded rectangle, radius 12)
 local tabsOrder = {"Character", "Automation"}
 for i, tabName in ipairs(tabsOrder) do
  local btn = Instance.new("TextButton")
- btn.Size = UDim2.new(1, -8, 0, 30)
- btn.Position = UDim2.new(0, 4, 0, 8 + (i-1) * 38)
+ btn.Size = UDim2.new(1, -8, 0, 34)
+ btn.Position = UDim2.new(0, 4, 0, 8 + (i-1) * 42)
  btn.Text = tabName
  btn.Font = Enum.Font.GothamBold
- btn.TextSize = 12
+ btn.TextSize = 13
  btn.BackgroundColor3 = i == 1 and ACCENT or BG_BUTTON
  btn.TextColor3 = i == 1 and TEXT_PRIMARY or TEXT_DIM
  btn.AutoButtonColor = false
  btn.BorderSizePixel = 0
  btn.Parent = tabContainer
- Instance.new("UICorner").CornerRadius = UDim.new(0, 15) Parent = btn   -- pill
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 12) Parent = btn
  tabButtons[tabName] = btn
  btn.MouseButton1Click:Connect(function() switchTab(tabName) end)
 end
