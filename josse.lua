@@ -1,5 +1,4 @@
--- JHub – All Features + Async Desync with Slider (0.05–1.0s)
--- You can adjust the desync duration with a slider, and type a custom value.
+print("=== JHub (Kazana Jump Toggle) ===")
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -40,8 +39,8 @@ local TEXT_DIM = Color3.fromRGB(140, 140, 145)
 
 -- ===== Main Frame =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 240, 0, 360) -- increased height for slider
-M.Position = UDim2.new(0.5, -120, 0.5, -180)
+M.Size = UDim2.new(0, 240, 0, 370)
+M.Position = UDim2.new(0.5, -120, 0.5, -185)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.08
 M.Active = true
@@ -73,6 +72,7 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Top
 layout.Parent = M
 
+-- ===== Screen Clamp =====
 local function Clamp()
     local vs = C.ViewportSize
     M.Position = UDim2.new(
@@ -245,7 +245,6 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     rowCorner.CornerRadius = UDim.new(0, 6)
     rowCorner.Parent = row
 
-    -- Label (top)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.6, 0, 0, 20)
     label.Position = UDim2.new(0, 12, 0, 2)
@@ -257,7 +256,6 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = row
 
-    -- Value display (right)
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
     valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
@@ -269,7 +267,6 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     valueLabel.Parent = row
 
-    -- Description
     local descLabel = Instance.new("TextLabel")
     descLabel.Size = UDim2.new(1, 0, 0, 14)
     descLabel.Position = UDim2.new(0, 12, 0, 22)
@@ -281,7 +278,6 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
     descLabel.Parent = row
 
-    -- Slider
     local sliderBg = Instance.new("Frame")
     sliderBg.Size = UDim2.new(0, 130, 0, 6)
     sliderBg.Position = UDim2.new(0, 12, 0, 38)
@@ -312,7 +308,6 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = knob
 
-    -- Text input
     local input = Instance.new("TextBox")
     input.Size = UDim2.new(0, 50, 0, 20)
     input.Position = UDim2.new(1, -62, 0, 36)
@@ -388,7 +383,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
     }
 end
 
--- ===== 1. Superhuman Boost =====
+-- ===== 1. Kazana Jump (formerly Superhuman Boost) =====
 local boostEnabled = false
 local BOOST_AMOUNT = 1.0
 local SPEED_MULTIPLIER = 1.15
@@ -398,10 +393,6 @@ local speedLoopConnection = nil
 local stateConnection = nil
 local currentHumanoid = nil
 
-local function getBoostedSpeed()
-    return originalWalkSpeed * SPEED_MULTIPLIER
-end
-
 local function applySpeedBasedOnState(humanoid)
     if not humanoid then return end
     if not boostEnabled then
@@ -409,8 +400,10 @@ local function applySpeedBasedOnState(humanoid)
         return
     end
     local state = humanoid:GetState()
-    if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Sprinting then
-        humanoid.WalkSpeed = getBoostedSpeed()
+    if state == Enum.HumanoidStateType.Landed or 
+       state == Enum.HumanoidStateType.Running or 
+       state == Enum.HumanoidStateType.Sprinting then
+        humanoid.WalkSpeed = originalWalkSpeed * SPEED_MULTIPLIER
     else
         humanoid.WalkSpeed = originalWalkSpeed
     end
@@ -477,7 +470,8 @@ local function applyBoostFull(character)
     applyBoostJump(character)
 end
 
-CreateReliableToggle(M, "Superhuman Boost", function(v)
+-- Create the toggle with new label
+CreateReliableToggle(M, "Kazana Jump", function(v)
     boostEnabled = v
     local char = LP.Character
     if char then
@@ -662,11 +656,11 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- ===== 4. Anti-Lag (Sound Preserved) =====
+-- ===== 4. Anti-Lag =====
 local antiLagEnabled = false
 local OriginalStates = {}
 local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
-local SavedRenderQuality, SavedQualityLevel = nil, nil
+local SavedQualityLevel = nil
 
 local function IsESPDown(obj)
     for _, entry in pairs(espBeams) do
@@ -686,85 +680,70 @@ local function SaveOriginalState(obj)
     elseif obj:IsA("Texture") or obj:IsA("Decal") then
         state.Texture = obj.Texture
         state.Transparency = obj.Transparency
-    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam") then
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
         state.Enabled = obj.Enabled
     elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
         state.Enabled = obj.Enabled
         state.Brightness = obj.Brightness
-    elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-        state.Enabled = obj.Enabled
-    -- No Sound – skip
-    elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
-        state.Scale = obj.Scale
     end
     if next(state) then OriginalStates[obj] = state end
 end
 
 local function ApplyAntiLag()
     local lighting = game:GetService("Lighting")
+
     local sky = lighting:FindFirstChildOfClass("Sky")
-    if sky and not SavedSkybox then SavedSkybox = sky:Clone(); sky.Parent = nil end
-    local atm = lighting:FindFirstChildOfClass("Atmosphere")
-    if atm and not SavedAtmosphere then SavedAtmosphere = atm:Clone(); atm.Parent = nil end
-    for _, cloud in ipairs(lighting:GetChildren()) do
-        if cloud:IsA("Clouds") then pcall(function() cloud.Parent = nil end) end
+    if sky and not SavedSkybox then
+        SavedSkybox = sky:Clone()
+        sky.Parent = nil
     end
+
+    local atm = lighting:FindFirstChildOfClass("Atmosphere")
+    if atm and not SavedAtmosphere then
+        SavedAtmosphere = atm:Clone()
+        atm.Parent = nil
+    end
+
+    for _, cloud in ipairs(lighting:GetChildren()) do
+        if cloud:IsA("Clouds") then
+            pcall(function() cloud.Parent = nil end)
+        end
+    end
+
     for _, effect in ipairs(lighting:GetChildren()) do
-        if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
+        if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or 
+           effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or 
+           effect:IsA("DepthOfFieldEffect") then
             pcall(function() effect.Enabled = false end)
         end
     end
-    pcall(function()
-        lighting.Ambient = Color3.fromRGB(128, 128, 128)
-        lighting.Brightness = 2
-        lighting.ColorShift_Bottom = Color3.fromRGB(128, 128, 128)
-        lighting.ColorShift_Top = Color3.fromRGB(128, 128, 128)
-        lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-    end)
+
     pcall(function()
         if not SavedLightingTech then
             SavedLightingTech = lighting.Technology
             SavedGlobalShadows = lighting.GlobalShadows
         end
-        lighting.Technology = Enum.Technology.Compatibility
         lighting.GlobalShadows = false
     end)
+
     pcall(function()
         if settings() and settings().Rendering then
-            if not SavedQualityLevel then SavedQualityLevel = settings().Rendering.QualityLevel end
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        end
-    end)
-    pcall(function()
-        if UserSettings() and UserSettings().GameSettings then
-            if not SavedRenderQuality then SavedRenderQuality = UserSettings().GameSettings.RenderQuality end
-            UserSettings().GameSettings.RenderQuality = 0
+            if not SavedQualityLevel then
+                SavedQualityLevel = settings().Rendering.QualityLevel
+            end
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level05
         end
     end)
 
     for _, obj in ipairs(workspace:GetDescendants()) do
         pcall(function()
-            if obj:IsA("Beam") and IsESPDown(obj) then return end
-            if obj:IsA("BasePart") and not obj:IsA("Terrain") then
-                SaveOriginalState(obj)
-                obj.Material = Enum.Material.Plastic
-                obj.Reflectance = 0
-                if obj:IsA("MeshPart") then obj.TextureID = "" end
-            elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
-                SaveOriginalState(obj)
-                obj.Transparency = 1
-            elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam")) then
-                if not IsESPDown(obj) then
-                    SaveOriginalState(obj)
-                    obj.Enabled = false
-                end
-            elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or 
+               obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
                 SaveOriginalState(obj)
                 obj.Enabled = false
-            -- Skip Sound
-            elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+            elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
                 SaveOriginalState(obj)
-                obj.Scale = Vector3.new(0, 0, 0)
+                obj.Enabled = false
             end
         end)
     end
@@ -772,64 +751,68 @@ local function ApplyAntiLag()
     pcall(function()
         local terrain = workspace:FindFirstChildOfClass("Terrain")
         if terrain then
-            terrain.Decoration = false
-            terrain.WaterColor = Color3.fromRGB(128, 128, 128)
-            terrain.WaterTransparency = 1
             terrain.WaterWaveSize = 0
             terrain.WaterWaveSpeed = 0
+            terrain.WaterTransparency = 0.5
         end
     end)
+
+    print("Anti-Lag ON")
 end
 
 local function RestoreOriginal()
     local lighting = game:GetService("Lighting")
-    if SavedSkybox then pcall(function() SavedSkybox.Parent = lighting end); SavedSkybox = nil end
-    if SavedAtmosphere then pcall(function() SavedAtmosphere.Parent = lighting end); SavedAtmosphere = nil end
+
+    if SavedSkybox then
+        pcall(function() SavedSkybox.Parent = lighting end)
+        SavedSkybox = nil
+    end
+    if SavedAtmosphere then
+        pcall(function() SavedAtmosphere.Parent = lighting end)
+        SavedAtmosphere = nil
+    end
+
     pcall(function()
-        if SavedLightingTech then lighting.Technology = SavedLightingTech; SavedLightingTech = nil end
-        if SavedGlobalShadows ~= nil then lighting.GlobalShadows = SavedGlobalShadows; SavedGlobalShadows = nil end
+        if SavedLightingTech then
+            lighting.Technology = SavedLightingTech
+            SavedLightingTech = nil
+        end
+        if SavedGlobalShadows ~= nil then
+            lighting.GlobalShadows = SavedGlobalShadows
+            SavedGlobalShadows = nil
+        end
     end)
+
     pcall(function()
         if settings() and settings().Rendering and SavedQualityLevel then
-            settings().Rendering.QualityLevel = SavedQualityLevel; SavedQualityLevel = nil
-        end
-        if UserSettings() and UserSettings().GameSettings and SavedRenderQuality ~= nil then
-            UserSettings().GameSettings.RenderQuality = SavedRenderQuality; SavedRenderQuality = nil
+            settings().Rendering.QualityLevel = SavedQualityLevel
+            SavedQualityLevel = nil
         end
     end)
+
     for obj, state in pairs(OriginalStates) do
         pcall(function()
-            if obj:IsA("BasePart") then
-                if state.Material then obj.Material = state.Material end
-                if state.Color then obj.Color = state.Color end
-                if state.Reflectance ~= nil then obj.Reflectance = state.Reflectance end
-                if obj:IsA("MeshPart") and state.TextureID ~= nil then obj.TextureID = state.TextureID end
-            elseif obj:IsA("Texture") or obj:IsA("Decal") then
-                if state.Texture then obj.Texture = state.Texture end
-                if state.Transparency then obj.Transparency = state.Transparency end
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam") then
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or 
+               obj:IsA("Fire") or obj:IsA("Sparkles") then
                 if state.Enabled ~= nil then obj.Enabled = state.Enabled end
             elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
                 if state.Enabled ~= nil then obj.Enabled = state.Enabled end
                 if state.Brightness then obj.Brightness = state.Brightness end
-            elseif obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-                if state.Enabled ~= nil then obj.Enabled = state.Enabled end
-            elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
-                if state.Scale then obj.Scale = state.Scale end
             end
         end)
     end
+
     pcall(function()
         local terrain = workspace:FindFirstChildOfClass("Terrain")
         if terrain then
-            terrain.Decoration = true
-            terrain.WaterColor = Color3.fromRGB(12, 84, 92)
-            terrain.WaterTransparency = 0.3
             terrain.WaterWaveSize = 0.15
             terrain.WaterWaveSpeed = 10
+            terrain.WaterTransparency = 0.3
         end
     end)
+
     OriginalStates = {}
+    print("Anti-Lag OFF")
 end
 
 CreateReliableToggle(M, "Anti-Lag", function(v)
@@ -837,13 +820,16 @@ CreateReliableToggle(M, "Anti-Lag", function(v)
     if v then ApplyAntiLag() else RestoreOriginal() end
 end)
 
--- ===== 5. Async Desync with Slider =====
+-- ===== 5. Async Desync (AGGRESSIVE) =====
 local asyncDesyncEnabled = false
 local asyncConnection = nil
-local ASYNC_COOLDOWN = 0.3  -- default, will be overwritten by slider
+local ASYNC_COOLDOWN = 0.3
+local lastTriggerTime = 0
+local MIN_INTERVAL = 0.5
+local BANDWIDTH_LOW = 1
 
 local function applyDesync(state)
-    local bandwidth = state and "1" or "999999"
+    local bandwidth = state and tostring(BANDWIDTH_LOW) or "999999"
     pcall(function()
         setfflag("PhysicsSenderMaxBandwidthBps", bandwidth)
     end)
@@ -852,6 +838,11 @@ end
 local function onJump(isActive)
     if not asyncDesyncEnabled then return end
     if not isActive then return end
+    
+    local now = tick()
+    if now - lastTriggerTime < MIN_INTERVAL then return end
+    lastTriggerTime = now
+    
     applyDesync(true)
     task.wait(ASYNC_COOLDOWN)
     applyDesync(false)
@@ -868,8 +859,7 @@ local function setupAsyncDesync(char)
     end
 end
 
--- Create the toggle
-local asyncToggle = CreateReliableToggle(M, "Async Desync", function(v)
+CreateReliableToggle(M, "Async Desync", function(v)
     asyncDesyncEnabled = v
     local char = LP.Character
     if char then
@@ -885,21 +875,19 @@ local asyncToggle = CreateReliableToggle(M, "Async Desync", function(v)
     end
 end)
 
--- Create the slider
 local sliderObj = CreateSliderWithInput(
     M,
     "Desync Duration",
-    0.05,  -- min
-    1.0,   -- max
-    0.3,   -- default
-    "0.3s is recommended",
+    0.05,
+    1.0,
+    0.3,
+    "0.3s is default",
     function(val)
         ASYNC_COOLDOWN = val
         print("Desync duration set to: " .. string.format("%.2f", val) .. "s")
     end
 )
 
--- Apply on respawn
 LP.CharacterAdded:Connect(function(ch)
     task.wait(0.2)
     if asyncDesyncEnabled then
@@ -924,27 +912,14 @@ workspace.DescendantAdded:Connect(function(obj)
     task.wait(0.1)
     pcall(function()
         if obj:IsA("Beam") and IsESPDown(obj) then return end
-        if obj:IsA("BasePart") and not obj:IsA("Terrain") then
-            SaveOriginalState(obj)
-            obj.Material = Enum.Material.Plastic
-            obj.Reflectance = 0
-            if obj:IsA("MeshPart") then obj.TextureID = "" end
-        elseif (obj:IsA("Texture") or obj:IsA("Decal")) then
-            SaveOriginalState(obj)
-            obj.Transparency = 1
-        elseif (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("Beam")) then
-            if not IsESPDown(obj) then
-                SaveOriginalState(obj)
-                obj.Enabled = false
-            end
-        elseif (obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight")) then
+        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
             SaveOriginalState(obj)
             obj.Enabled = false
-        elseif obj:IsA("Mesh") or obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+        elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
             SaveOriginalState(obj)
-            obj.Scale = Vector3.new(0, 0, 0)
+            obj.Enabled = false
         end
     end)
 end)
 
-print("JHub loaded – Async Desync slider added. 0.3s is recommended.")
+print("JHub loaded – 'Kazana Jump' toggle (formerly Superhuman Boost).")
