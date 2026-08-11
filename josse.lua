@@ -31,7 +31,8 @@ local BG_BUTTON_ON = Color3.fromRGB(235, 35, 75)
 local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
-local WARNING_COLOR = Color3.fromRGB(255, 200, 100)
+local WARNING_BG = Color3.fromRGB(70, 50, 20)      -- dark amber
+local WARNING_TEXT = Color3.fromRGB(255, 220, 150) -- soft gold
 
 -- ===== Persistent state variables =====
 local boostEnabled = false
@@ -42,10 +43,10 @@ local asyncDesyncEnabled = false
 local desyncDuration = 0.3
 local ASYNC_COOLDOWN = 0.3
 
--- ===== Main Frame =====
+-- ===== Main Frame (height reduced to 260) =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 320, 0, 280)
-M.Position = UDim2.new(0.5, -160, 0.5, -140)
+M.Size = UDim2.new(0, 320, 0, 260)  -- reduced from 280
+M.Position = UDim2.new(0.5, -160, 0.5, -130)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.05
 M.Active = true
@@ -177,7 +178,7 @@ contentArea.BorderSizePixel = 0
 contentArea.Parent = M
 
 local contentLayout = Instance.new("UIListLayout")
-contentLayout.Padding = UDim.new(0, 5)
+contentLayout.Padding = UDim.new(0, 4)  -- reduced spacing
 contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 contentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 contentLayout.Parent = contentArea
@@ -237,7 +238,7 @@ end
 -- ===== Helper: Reliable Toggle (debounce 0.1s) =====
 local function CreateReliableToggle(parent, labelText, initialState, callback)
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 28)
+ row.Size = UDim2.new(1, 0, 0, 26)  -- slightly smaller
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
@@ -266,7 +267,7 @@ local function CreateReliableToggle(parent, labelText, initialState, callback)
  btn.Parent = row
  Instance.new("UICorner").CornerRadius = UDim.new(0, 9) Parent = btn
 
- local enabled = (initialState == true)  -- force boolean
+ local enabled = (initialState == true)
  local debounce = false
 
  local function updateUI()
@@ -313,7 +314,7 @@ end
 -- ===== Helper: Slider with visibility =====
 local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback)
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 72)
+ row.Size = UDim2.new(1, 0, 0, 70)  -- slightly reduced height
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
@@ -813,17 +814,41 @@ function buildCharacterTab()
 end
 
 function buildAutomationTab()
- -- Add warning label
- local warn = Instance.new("TextLabel")
- warn.Size = UDim2.new(1, 0, 0, 20)
- warn.BackgroundTransparency = 1
- warn.Text = "⚠ Only one Inf toggle can be ON at a time."
- warn.TextColor3 = WARNING_COLOR
- warn.TextSize = 10
- warn.Font = Enum.Font.GothamBold
- warn.TextWrapped = true
- warn.TextXAlignment = Enum.TextXAlignment.Center
- warn.Parent = contentArea
+ -- Helper to create a subtle warning label
+ local function CreateWarningLabel(text, parent)
+  local bg = Instance.new("Frame")
+  bg.Size = UDim2.new(1, 0, 0, 28)
+  bg.BackgroundColor3 = WARNING_BG
+  bg.BorderSizePixel = 0
+  bg.Parent = parent
+  local bgCorner = Instance.new("UICorner")
+  bgCorner.CornerRadius = UDim.new(0, 8)
+  bgCorner.Parent = bg
+  local bgStroke = Instance.new("UIStroke")
+  bgStroke.Color = Color3.fromRGB(180, 140, 80)
+  bgStroke.Thickness = 1.5
+  bgStroke.Transparency = 0.5
+  bgStroke.Parent = bg
+
+  local label = Instance.new("TextLabel")
+  label.Size = UDim2.new(1, 0, 1, 0)
+  label.BackgroundTransparency = 1
+  label.Text = "⚠ " .. text
+  label.TextColor3 = WARNING_TEXT
+  label.TextSize = 11
+  label.Font = Enum.Font.GothamBold
+  label.TextWrapped = true
+  label.TextXAlignment = Enum.TextXAlignment.Center
+  label.Parent = bg
+
+  return bg
+ end
+
+ -- First warning
+ CreateWarningLabel("Only one Inf toggle can be ON at a time.", contentArea)
+
+ -- Second warning
+ CreateWarningLabel("Do not exceed 400 lucky spins per session to avoid ban.", contentArea)
 
  -- Inf Lucky Style Spins
  local styleToggle = CreateReliableToggle(contentArea, "Inf Lucky Style Spins", rankedEnabled.style, function(v)
