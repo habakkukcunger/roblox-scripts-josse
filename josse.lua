@@ -8,6 +8,8 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
 local C = workspace.CurrentCamera
 
@@ -31,8 +33,8 @@ local BG_BUTTON_ON = Color3.fromRGB(235, 35, 75)
 local TEXT_PRIMARY = Color3.fromRGB(255, 255, 255)
 local TEXT_SECONDARY = Color3.fromRGB(210, 210, 215)
 local TEXT_DIM = Color3.fromRGB(140, 140, 145)
-local WARNING_BG = Color3.fromRGB(70, 50, 20)      -- dark amber
-local WARNING_TEXT = Color3.fromRGB(255, 220, 150) -- soft gold
+local WARNING_BG = Color3.fromRGB(70, 50, 20)
+local WARNING_TEXT = Color3.fromRGB(255, 220, 150)
 
 -- ===== Persistent state variables =====
 local boostEnabled = false
@@ -43,10 +45,137 @@ local asyncDesyncEnabled = false
 local desyncDuration = 0.3
 local ASYNC_COOLDOWN = 0.3
 
--- ===== Main Frame (height reduced to 260) =====
+-- ===== HITBOX EXTENDER STATE =====
+local hitboxEnabled = false
+local hitboxSize = 5.0
+local hitboxBallAddedConnection = nil
+
+-- ===== CONFIG FILE =====
+local configPath = "JHubConfig.json"
+
+local function saveConfig()
+    local config = {
+        hitboxEnabled = hitboxEnabled,
+        hitboxSize = hitboxSize,
+        desyncDuration = desyncDuration,
+        boostEnabled = boostEnabled,
+        shiftlockEnabled = shiftlockEnabled,
+        espEnabled = espEnabled,
+        antiLagEnabled = antiLagEnabled,
+        asyncDesyncEnabled = asyncDesyncEnabled,
+    }
+    local json = HttpService:JSONEncode(config)
+    pcall(function() writefile(configPath, json) end)
+    print("Config saved")
+end
+
+local function loadConfig()
+    if not isfile(configPath) then
+        print("No config file found, using defaults")
+        return
+    end
+    local json = readfile(configPath)
+    if json == "" then
+        print("Config file is empty, using defaults")
+        return
+    end
+    local success, config = pcall(HttpService.JSONDecode, HttpService, json)
+    if not success then
+        print("Config parse failed, using defaults")
+        return
+    end
+    if config.hitboxEnabled ~= nil then
+        hitboxEnabled = config.hitboxEnabled
+        if hitboxEnabled then toggleHitboxExtender(true) else toggleHitboxExtender(false) end
+    end
+    if config.hitboxSize then
+        hitboxSize = config.hitboxSize
+        if hitboxEnabled then updateHitboxes(hitboxSize) end
+    end
+    if config.desyncDuration then
+        desyncDuration = config.desyncDuration
+        ASYNC_COOLDOWN = desyncDuration
+    end
+    if config.boostEnabled ~= nil then boostEnabled = config.boostEnabled end
+    if config.shiftlockEnabled ~= nil then shiftlockEnabled = config.shiftlockEnabled end
+    if config.espEnabled ~= nil then espEnabled = config.espEnabled end
+    if config.antiLagEnabled ~= nil then antiLagEnabled = config.antiLagEnabled end
+    if config.asyncDesyncEnabled ~= nil then asyncDesyncEnabled = config.asyncDesyncEnabled end
+    print("Config loaded")
+end
+
+-- ===== HITBOX EXTENDER FUNCTIONS =====
+local function findFirstPart(model)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            return descendant
+        end
+    end
+    return nil
+end
+
+local function updateHitboxes(scale)
+    if not hitboxEnabled then return end
+    for _, model in ipairs(Workspace:GetChildren()) do
+        if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
+            local ball = model:FindFirstChild("Ball.001")
+            if not ball then
+                local basePart = findFirstPart(model)
+                if basePart then
+                    ball = Instance.new("Part")
+                    ball.Name = "Ball.001"
+                    ball.Shape = Enum.PartType.Ball
+                    ball.Size = Vector3.new(2, 2, 2) * scale
+                    ball.CFrame = basePart.CFrame
+                    ball.Anchored = true
+                    ball.CanCollide = false
+                    ball.Transparency = 0.7
+                    ball.Material = Enum.Material.ForceField
+                    ball.Color = Color3.fromRGB(255, 50, 50)
+                    ball.Parent = model
+                end
+            else
+                ball.Size = Vector3.new(2, 2, 2) * scale
+            end
+        end
+    end
+end
+
+local function removeHitboxes()
+    for _, model in ipairs(Workspace:GetChildren()) do
+        if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
+            local ball = model:FindFirstChild("Ball.001")
+            if ball then ball:Destroy() end
+        end
+    end
+end
+
+local function toggleHitboxExtender(enable)
+    hitboxEnabled = enable
+    if enable then
+        if not hitboxBallAddedConnection then
+            hitboxBallAddedConnection = Workspace.ChildAdded:Connect(function(child)
+                if child:IsA("Model") and child.Name:match("^CLIENT_BALL_%d+$") then
+                    task.wait(0.1)
+                    if hitboxEnabled then updateHitboxes(hitboxSize) end
+                end
+            end)
+        end
+        updateHitboxes(hitboxSize)
+    else
+        if hitboxBallAddedConnection then
+            hitboxBallAddedConnection:Disconnect()
+            hitboxBallAddedConnection = nil
+        end
+        removeHitboxes()
+    end
+    saveConfig()
+end
+
+-- ===== Main Frame =====
 local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 320, 0, 260)  -- reduced from 280
-M.Position = UDim2.new(0.5, -160, 0.5, -130)
+M.Size = UDim2.new(0, 320, 0, 280)
+M.Position = UDim2.new(0.5, -160, 0.5, -140)
 M.BackgroundColor3 = BG_DARK
 M.BackgroundTransparency = 0.05
 M.Active = true
@@ -170,18 +299,28 @@ tabContainer.Position = UDim2.new(0, 0, 0, 28)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = M
 
-local contentArea = Instance.new("Frame")
+-- Scrolling Content Area
+local contentArea = Instance.new("ScrollingFrame")
 contentArea.Size = UDim2.new(1, -76, 1, -36)
 contentArea.Position = UDim2.new(0, 76, 0, 28)
 contentArea.BackgroundTransparency = 1
 contentArea.BorderSizePixel = 0
+contentArea.CanvasSize = UDim2.new(0, 0, 0, 0)
+contentArea.AutomaticCanvasSize = Enum.AutomaticSize.Y
+contentArea.ScrollBarThickness = 6
+contentArea.ScrollBarImageColor3 = ACCENT
 contentArea.Parent = M
 
 local contentLayout = Instance.new("UIListLayout")
-contentLayout.Padding = UDim.new(0, 4)  -- reduced spacing
+contentLayout.Padding = UDim.new(0, 4)
 contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 contentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 contentLayout.Parent = contentArea
+
+contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    contentArea.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 10)
+end)
 
 local currentTab = nil
 local tabButtons = {}
@@ -190,6 +329,7 @@ local function clearContent()
  for _, child in ipairs(contentArea:GetChildren()) do
   if child ~= contentLayout then child:Destroy() end
  end
+ contentArea.CanvasSize = UDim2.new(0, 0, 0, 0)
 end
 
 local function switchTab(tabName)
@@ -235,10 +375,10 @@ for i, tabName in ipairs(tabsOrder) do
  btn.MouseButton1Click:Connect(function() switchTab(tabName) end)
 end
 
--- ===== Helper: Reliable Toggle (debounce 0.1s) =====
+-- ===== Helper: Reliable Toggle =====
 local function CreateReliableToggle(parent, labelText, initialState, callback)
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 26)  -- slightly smaller
+ row.Size = UDim2.new(1, 0, 0, 26)
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
@@ -311,10 +451,11 @@ local function CreateReliableToggle(parent, labelText, initialState, callback)
  }
 end
 
--- ===== Helper: Slider with visibility =====
-local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback)
+-- ===== Helper: Slider (compact, no overflow) =====
+local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback, unit)
+ unit = unit or "s"
  local row = Instance.new("Frame")
- row.Size = UDim2.new(1, 0, 0, 70)  -- slightly reduced height
+ row.Size = UDim2.new(1, 0, 0, 72)
  row.BackgroundColor3 = BG_PANEL
  row.BorderSizePixel = 0
  row.Parent = parent
@@ -326,7 +467,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  label.BackgroundTransparency = 1
  label.Text = labelText
  label.TextColor3 = TEXT_SECONDARY
- label.TextSize = 11
+ label.TextSize = 12
  label.Font = Enum.Font.GothamMedium
  label.TextXAlignment = Enum.TextXAlignment.Left
  label.Parent = row
@@ -335,42 +476,42 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  valueLabel.Size = UDim2.new(0.3, 0, 0, 18)
  valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
  valueLabel.BackgroundTransparency = 1
- valueLabel.Text = string.format("%.2f", default) .. "s"
+ valueLabel.Text = string.format("%.2f", default) .. unit
  valueLabel.TextColor3 = TEXT_PRIMARY
- valueLabel.TextSize = 11
+ valueLabel.TextSize = 12
  valueLabel.Font = Enum.Font.GothamBold
  valueLabel.TextXAlignment = Enum.TextXAlignment.Right
  valueLabel.Parent = row
 
  local descLabel = Instance.new("TextLabel")
  descLabel.Size = UDim2.new(1, 0, 0, 14)
- descLabel.Position = UDim2.new(0, 8, 0, 20)
+ descLabel.Position = UDim2.new(0, 8, 0, 22)
  descLabel.BackgroundTransparency = 1
  descLabel.Text = desc or ""
  descLabel.TextColor3 = TEXT_DIM
- descLabel.TextSize = 9
+ descLabel.TextSize = 10
  descLabel.Font = Enum.Font.Gotham
  descLabel.TextXAlignment = Enum.TextXAlignment.Left
  descLabel.Parent = row
 
  local sliderBg = Instance.new("Frame")
- sliderBg.Size = UDim2.new(0, 140, 0, 10)
+ sliderBg.Size = UDim2.new(0, 120, 0, 12)
  sliderBg.Position = UDim2.new(0, 8, 0, 44)
  sliderBg.BackgroundColor3 = BG_BUTTON
  sliderBg.BorderSizePixel = 0
  sliderBg.Parent = row
- Instance.new("UICorner").CornerRadius = UDim.new(0, 5) Parent = sliderBg
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 6) Parent = sliderBg
 
  local fill = Instance.new("Frame")
  fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
  fill.BackgroundColor3 = ACCENT
  fill.BorderSizePixel = 0
  fill.Parent = sliderBg
- Instance.new("UICorner").CornerRadius = UDim.new(0, 5) Parent = fill
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 6) Parent = fill
 
  local knob = Instance.new("TextButton")
- knob.Size = UDim2.new(0, 24, 0, 24)
- knob.Position = UDim2.new((default - min) / (max - min), -12, 0.5, -12)
+ knob.Size = UDim2.new(0, 26, 0, 26)
+ knob.Position = UDim2.new((default - min) / (max - min), -13, 0.5, -13)
  knob.BackgroundColor3 = ACCENT
  knob.BorderSizePixel = 0
  knob.Text = ""
@@ -387,23 +528,23 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  gradient.Parent = knob
  local knobStroke = Instance.new("UIStroke")
  knobStroke.Color = Color3.fromRGB(255, 255, 255)
- knobStroke.Thickness = 1.5
- knobStroke.Transparency = 0.3
+ knobStroke.Thickness = 2
+ knobStroke.Transparency = 0.2
  knobStroke.Parent = knob
 
  local input = Instance.new("TextBox")
- input.Size = UDim2.new(0, 48, 0, 20)
- input.Position = UDim2.new(1, -66, 0, 40)
+ input.Size = UDim2.new(0, 46, 0, 22)
+ input.Position = UDim2.new(1, -48, 0, 40)
  input.BackgroundColor3 = BG_BUTTON
  input.BorderSizePixel = 0
  input.Text = string.format("%.2f", default)
  input.TextColor3 = TEXT_PRIMARY
- input.TextSize = 11
+ input.TextSize = 12
  input.Font = Enum.Font.GothamBold
  input.TextXAlignment = Enum.TextXAlignment.Center
  input.ClearTextOnFocus = false
  input.Parent = row
- Instance.new("UICorner").CornerRadius = UDim.new(0, 4) Parent = input
+ Instance.new("UICorner").CornerRadius = UDim.new(0, 5) Parent = input
 
  local currentVal = default
  local dragging = false
@@ -414,8 +555,8 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
   currentVal = val
   local percent = (val - min) / (max - min)
   fill.Size = UDim2.new(percent, 0, 1, 0)
-  knob.Position = UDim2.new(percent, -12, 0.5, -12)
-  valueLabel.Text = string.format("%.2f", val) .. "s"
+  knob.Position = UDim2.new(percent, -13, 0.5, -13)
+  valueLabel.Text = string.format("%.2f", val) .. unit
   input.Text = string.format("%.2f", val)
   callback(val)
  end
@@ -459,7 +600,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  }
 end
 
--- ===== Global connections and utility functions =====
+-- ===== Global functions (boost, shiftlock, esp, anti‑lag, desync) =====
 local boostConnection = nil
 local speedLoopConnection = nil
 local stateConnection = nil
@@ -616,7 +757,7 @@ local function ApplyAntiLag()
    settings().Rendering.QualityLevel = Enum.QualityLevel.Level05
   end
  end)
- for _, obj in ipairs(workspace:GetDescendants()) do
+ for _, obj in ipairs(Workspace:GetDescendants()) do
   pcall(function()
    if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
     SaveOriginalState(obj)
@@ -628,7 +769,7 @@ local function ApplyAntiLag()
   end)
  end
  pcall(function()
-  local terrain = workspace:FindFirstChildOfClass("Terrain")
+  local terrain = Workspace:FindFirstChildOfClass("Terrain")
   if terrain then terrain.WaterWaveSize = 0 terrain.WaterWaveSpeed = 0 terrain.WaterTransparency = 0.5 end
  end)
 end
@@ -655,7 +796,7 @@ local function RestoreOriginal()
   end)
  end
  pcall(function()
-  local terrain = workspace:FindFirstChildOfClass("Terrain")
+  local terrain = Workspace:FindFirstChildOfClass("Terrain")
   if terrain then terrain.WaterWaveSize = 0.15 terrain.WaterWaveSpeed = 10 terrain.WaterTransparency = 0.3 end
  end)
  OriginalStates = {}
@@ -725,154 +866,188 @@ end
 
 -- ===== Build Tabs =====
 function buildCharacterTab()
- -- 1. Kazana Jump
- CreateReliableToggle(contentArea, "Kazana Jump", boostEnabled, function(v)
-  boostEnabled = v
-  local char = LP.Character
-  if char then
-   if boostEnabled then applyBoostFull(char)
-   else
-    if stateConnection then stateConnection:Disconnect() stateConnection = nil end
-    if speedLoopConnection then speedLoopConnection:Disconnect() speedLoopConnection = nil end
-    if boostConnection then boostConnection:Disconnect() boostConnection = nil end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = originalWalkSpeed end
-   end
-  end
- end)
+    -- Kazana Jump
+    CreateReliableToggle(contentArea, "Kazana Jump", boostEnabled, function(v)
+        boostEnabled = v
+        local char = LP.Character
+        if char then
+            if boostEnabled then applyBoostFull(char)
+            else
+                if stateConnection then stateConnection:Disconnect() stateConnection = nil end
+                if speedLoopConnection then speedLoopConnection:Disconnect() speedLoopConnection = nil end
+                if boostConnection then boostConnection:Disconnect() boostConnection = nil end
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.WalkSpeed = originalWalkSpeed end
+            end
+        end
+        saveConfig()
+    end)
 
- -- 2. Auto Shiftlock
- CreateReliableToggle(contentArea, "Auto Shiftlock", shiftlockEnabled, function(v)
-  shiftlockEnabled = v
-  if v then
-   local char = LP.Character
-   if char then setupShiftlock(char) end
-  else
-   cleanupShiftlock()
-  end
- end)
+    -- Auto Shiftlock
+    CreateReliableToggle(contentArea, "Auto Shiftlock", shiftlockEnabled, function(v)
+        shiftlockEnabled = v
+        if v then
+            local char = LP.Character
+            if char then setupShiftlock(char) end
+        else
+            cleanupShiftlock()
+        end
+        saveConfig()
+    end)
 
- -- 3. Direction Facing ESP
- CreateReliableToggle(contentArea, "Direction Facing ESP", espEnabled, function(v)
-  espEnabled = v
-  if not v then
-   for _, data in pairs(espBeams) do
-    pcall(function() data.Beam:Destroy() data.A0:Destroy() data.A1:Destroy() end)
-   end
-   table.clear(espBeams)
-  end
- end)
+    -- Direction Facing ESP
+    CreateReliableToggle(contentArea, "Direction Facing ESP", espEnabled, function(v)
+        espEnabled = v
+        if not v then
+            for _, data in pairs(espBeams) do
+                pcall(function() data.Beam:Destroy() data.A0:Destroy() data.A1:Destroy() end)
+            end
+            table.clear(espBeams)
+        end
+        saveConfig()
+    end)
 
- -- 4. Anti-Lag
- CreateReliableToggle(contentArea, "Anti-Lag", antiLagEnabled, function(v)
-  antiLagEnabled = v
-  if v then ApplyAntiLag() else RestoreOriginal() end
- end)
+    -- Anti-Lag
+    CreateReliableToggle(contentArea, "Anti-Lag", antiLagEnabled, function(v)
+        antiLagEnabled = v
+        if v then ApplyAntiLag() else RestoreOriginal() end
+        saveConfig()
+    end)
 
- -- 5. Async Desync + slider visibility
- local sliderRow = nil
- local sliderObj = nil
+    -- Async Desync + slider visibility
+    local sliderRow = nil
+    CreateReliableToggle(contentArea, "Async Desync", asyncDesyncEnabled, function(v)
+        asyncDesyncEnabled = v
+        local char = LP.Character
+        if char then
+            if v then setupAsyncDesync(char) else
+                if asyncConnection then asyncConnection:Disconnect() asyncConnection = nil end
+                applyDesync(false)
+            end
+        end
+        if sliderRow then sliderRow.Visible = v end
+        saveConfig()
+    end)
 
- CreateReliableToggle(contentArea, "Async Desync", asyncDesyncEnabled, function(v)
-  asyncDesyncEnabled = v
-  local char = LP.Character
-  if char then
-   if v then setupAsyncDesync(char) else
-    if asyncConnection then asyncConnection:Disconnect() asyncConnection = nil end
-    applyDesync(false)
-   end
-  end
-  if sliderRow then
-   sliderRow.Visible = v
-  end
- end)
+    -- Desync Duration slider
+    local slider = CreateSliderWithInput(
+        contentArea,
+        "Desync Duration",
+        0.05, 1.0, desyncDuration,
+        "Time bandwidth is low",
+        function(val)
+            desyncDuration = val
+            ASYNC_COOLDOWN = val
+            saveConfig()
+        end,
+        "s"
+    )
+    sliderRow = slider.row
+    sliderRow.Visible = asyncDesyncEnabled
 
- -- 6. Desync Duration (hidden by default)
- local slider = CreateSliderWithInput(
-  contentArea,
-  "Desync Duration",
-  0.05,
-  1.0,
-  desyncDuration,
-  "Time bandwidth is low",
-  function(val)
-   desyncDuration = val
-   ASYNC_COOLDOWN = val
-  end
- )
- sliderRow = slider.row
- sliderRow.Visible = asyncDesyncEnabled
- sliderObj = slider
+    -- Hitbox Extender
+    CreateReliableToggle(contentArea, "Hitbox Extender", hitboxEnabled, function(v)
+        toggleHitboxExtender(v)
+        saveConfig()
+    end)
 
- -- Apply initial states to existing character
- local char = LP.Character
- if char then
-  if boostEnabled then applyBoostFull(char) end
-  if shiftlockEnabled then setupShiftlock(char) end
-  if asyncDesyncEnabled then setupAsyncDesync(char) end
- end
+    CreateSliderWithInput(
+        contentArea,
+        "Hitbox Size (radius)",
+        1, 20, hitboxSize,
+        "Visual radius of the overlay",
+        function(val)
+            hitboxSize = val
+            if hitboxEnabled then updateHitboxes(hitboxSize) end
+            saveConfig()
+        end,
+        ""
+    )
+
+    -- Apply initial states to existing character
+    local char = LP.Character
+    if char then
+        if boostEnabled then applyBoostFull(char) end
+        if shiftlockEnabled then setupShiftlock(char) end
+        if asyncDesyncEnabled then setupAsyncDesync(char) end
+        if hitboxEnabled then updateHitboxes(hitboxSize) end
+    end
 end
 
 function buildAutomationTab()
- -- Helper to create a subtle warning label
- local function CreateWarningLabel(text, parent)
-  local bg = Instance.new("Frame")
-  bg.Size = UDim2.new(1, 0, 0, 28)
-  bg.BackgroundColor3 = WARNING_BG
-  bg.BorderSizePixel = 0
-  bg.Parent = parent
-  local bgCorner = Instance.new("UICorner")
-  bgCorner.CornerRadius = UDim.new(0, 8)
-  bgCorner.Parent = bg
-  local bgStroke = Instance.new("UIStroke")
-  bgStroke.Color = Color3.fromRGB(180, 140, 80)
-  bgStroke.Thickness = 1.5
-  bgStroke.Transparency = 0.5
-  bgStroke.Parent = bg
+    -- Warning labels
+    local warn1 = Instance.new("Frame")
+    warn1.Size = UDim2.new(1, 0, 0, 26)
+    warn1.BackgroundColor3 = WARNING_BG
+    warn1.BorderSizePixel = 0
+    warn1.Parent = contentArea
+    local wc1 = Instance.new("UICorner")
+    wc1.CornerRadius = UDim.new(0, 8)
+    wc1.Parent = warn1
+    local ws1 = Instance.new("UIStroke")
+    ws1.Color = Color3.fromRGB(180, 140, 80)
+    ws1.Thickness = 1.5
+    ws1.Transparency = 0.5
+    ws1.Parent = warn1
+    local l1 = Instance.new("TextLabel")
+    l1.Size = UDim2.new(1, 0, 1, 0)
+    l1.BackgroundTransparency = 1
+    l1.Text = "⚠ Only one Inf toggle can be ON at a time."
+    l1.TextColor3 = WARNING_TEXT
+    l1.TextSize = 11
+    l1.Font = Enum.Font.GothamBold
+    l1.TextWrapped = true
+    l1.TextXAlignment = Enum.TextXAlignment.Center
+    l1.Parent = warn1
 
-  local label = Instance.new("TextLabel")
-  label.Size = UDim2.new(1, 0, 1, 0)
-  label.BackgroundTransparency = 1
-  label.Text = "⚠ " .. text
-  label.TextColor3 = WARNING_TEXT
-  label.TextSize = 11
-  label.Font = Enum.Font.GothamBold
-  label.TextWrapped = true
-  label.TextXAlignment = Enum.TextXAlignment.Center
-  label.Parent = bg
+    local warn2 = Instance.new("Frame")
+    warn2.Size = UDim2.new(1, 0, 0, 26)
+    warn2.BackgroundColor3 = WARNING_BG
+    warn2.BorderSizePixel = 0
+    warn2.Parent = contentArea
+    local wc2 = Instance.new("UICorner")
+    wc2.CornerRadius = UDim.new(0, 8)
+    wc2.Parent = warn2
+    local ws2 = Instance.new("UIStroke")
+    ws2.Color = Color3.fromRGB(180, 140, 80)
+    ws2.Thickness = 1.5
+    ws2.Transparency = 0.5
+    ws2.Parent = warn2
+    local l2 = Instance.new("TextLabel")
+    l2.Size = UDim2.new(1, 0, 1, 0)
+    l2.BackgroundTransparency = 1
+    l2.Text = "⚠ Do not exceed 400 lucky spins per session to avoid ban."
+    l2.TextColor3 = WARNING_TEXT
+    l2.TextSize = 11
+    l2.Font = Enum.Font.GothamBold
+    l2.TextWrapped = true
+    l2.TextXAlignment = Enum.TextXAlignment.Center
+    l2.Parent = warn2
 
-  return bg
- end
+    -- Inf toggles
+    local styleToggle = CreateReliableToggle(contentArea, "Inf Lucky Style Spins", rankedEnabled.style, function(v)
+        rankedEnabled.style = v
+        updateRankedLoop()
+        if v then fireRankedReward(1) end
+        saveConfig()
+    end)
+    styleToggle:setEnabled(rankedEnabled.style)
 
- -- First warning
- CreateWarningLabel("Only one Inf toggle can be ON at a time.", contentArea)
+    local yenToggle = CreateReliableToggle(contentArea, "Inf Yen", rankedEnabled.yen, function(v)
+        rankedEnabled.yen = v
+        updateRankedLoop()
+        if v then fireRankedReward(2) end
+        saveConfig()
+    end)
+    yenToggle:setEnabled(rankedEnabled.yen)
 
- -- Second warning
- CreateWarningLabel("Do not exceed 400 lucky spins per session to avoid ban.", contentArea)
-
- -- Inf Lucky Style Spins
- local styleToggle = CreateReliableToggle(contentArea, "Inf Lucky Style Spins", rankedEnabled.style, function(v)
-  rankedEnabled.style = v
-  updateRankedLoop()
-  if v then fireRankedReward(1) end
- end)
- styleToggle:setEnabled(rankedEnabled.style)
-
- -- Inf Yen
- local yenToggle = CreateReliableToggle(contentArea, "Inf Yen", rankedEnabled.yen, function(v)
-  rankedEnabled.yen = v
-  updateRankedLoop()
-  if v then fireRankedReward(2) end
- end)
- yenToggle:setEnabled(rankedEnabled.yen)
-
- -- Inf Lucky Ability Spins
- local abilityToggle = CreateReliableToggle(contentArea, "Inf Lucky Ability Spins", rankedEnabled.ability, function(v)
-  rankedEnabled.ability = v
-  updateRankedLoop()
-  if v then fireRankedReward(4) end
- end)
- abilityToggle:setEnabled(rankedEnabled.ability)
+    local abilityToggle = CreateReliableToggle(contentArea, "Inf Lucky Ability Spins", rankedEnabled.ability, function(v)
+        rankedEnabled.ability = v
+        updateRankedLoop()
+        if v then fireRankedReward(4) end
+        saveConfig()
+    end)
+    abilityToggle:setEnabled(rankedEnabled.ability)
 end
 
 -- ===== CharacterAdded connections =====
@@ -881,6 +1056,7 @@ LP.CharacterAdded:Connect(function(ch)
  if boostEnabled then applyBoostFull(ch) end
  if shiftlockEnabled then setupShiftlock(ch) end
  if asyncDesyncEnabled then setupAsyncDesync(ch) end
+ if hitboxEnabled then updateHitboxes(hitboxSize) end
 end)
 
 -- Shiftlock render loop
@@ -912,9 +1088,9 @@ RunService.RenderStepped:Connect(function()
   if not torso then continue end
   local data = espBeams[p]
   if not data then
-   local a0 = Instance.new("Attachment", workspace.Terrain)
-   local a1 = Instance.new("Attachment", workspace.Terrain)
-   local beam = Instance.new("Beam", workspace.Terrain)
+   local a0 = Instance.new("Attachment", Workspace.Terrain)
+   local a1 = Instance.new("Attachment", Workspace.Terrain)
+   local beam = Instance.new("Beam", Workspace.Terrain)
    beam.Attachment0 = a0
    beam.Attachment1 = a1
    beam.Width0 = 0.35
@@ -950,7 +1126,7 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 -- Anti-lag new objects
-workspace.DescendantAdded:Connect(function(obj)
+Workspace.DescendantAdded:Connect(function(obj)
  if not antiLagEnabled then return end
  wait(0.1)
  pcall(function()
@@ -965,6 +1141,7 @@ workspace.DescendantAdded:Connect(function(obj)
  end)
 end)
 
--- Initialize with Character tab
+-- Load config and initialize
+loadConfig()
 switchTab("Character")
-print("JHub Pill ready.")
+print("JHub Pill ready with config save/load")
