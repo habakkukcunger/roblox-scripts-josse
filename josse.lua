@@ -13,7 +13,7 @@ local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
 local C = workspace.CurrentCamera
 
--- Wait for PlayerGui
+-- Wait for PlayerGui (done instantly)
 local PG = LP:FindFirstChild("PlayerGui")
 if not PG then for i = 1, 100 do wait(0.1) PG = LP:FindFirstChild("PlayerGui") if PG then break end end end
 if not PG then warn("PlayerGui not found") return end
@@ -37,6 +37,7 @@ local WARNING_BG = Color3.fromRGB(70, 50, 20)
 local WARNING_TEXT = Color3.fromRGB(255, 220, 150)
 
 -- ===== Persistent state variables =====
+-- Force default to OFF (These will be reset to false on every load)
 local boostEnabled = false
 local shiftlockEnabled = false
 local espEnabled = false
@@ -54,15 +55,10 @@ local hitboxBallAddedConnection = nil
 local configPath = "JHubConfig.json"
 
 local function saveConfig()
+    -- ONLY saving slider sizes and duration; NOT saving toggle states!
     local config = {
-        hitboxEnabled = hitboxEnabled,
         hitboxSize = hitboxSize,
         desyncDuration = desyncDuration,
-        boostEnabled = boostEnabled,
-        shiftlockEnabled = shiftlockEnabled,
-        espEnabled = espEnabled,
-        antiLagEnabled = antiLagEnabled,
-        asyncDesyncEnabled = asyncDesyncEnabled,
     }
     local json = HttpService:JSONEncode(config)
     pcall(function() writefile(configPath, json) end)
@@ -84,24 +80,16 @@ local function loadConfig()
         print("Config parse failed, using defaults")
         return
     end
-    if config.hitboxEnabled ~= nil then
-        hitboxEnabled = config.hitboxEnabled
-        if hitboxEnabled then toggleHitboxExtender(true) else toggleHitboxExtender(false) end
-    end
+    
+    -- LOAD ONLY SLIDER VALUES: Ignore all booleans so features default to OFF!
     if config.hitboxSize then
         hitboxSize = config.hitboxSize
-        if hitboxEnabled then updateHitboxes(hitboxSize) end
     end
     if config.desyncDuration then
         desyncDuration = config.desyncDuration
         ASYNC_COOLDOWN = desyncDuration
     end
-    if config.boostEnabled ~= nil then boostEnabled = config.boostEnabled end
-    if config.shiftlockEnabled ~= nil then shiftlockEnabled = config.shiftlockEnabled end
-    if config.espEnabled ~= nil then espEnabled = config.espEnabled end
-    if config.antiLagEnabled ~= nil then antiLagEnabled = config.antiLagEnabled end
-    if config.asyncDesyncEnabled ~= nil then asyncDesyncEnabled = config.asyncDesyncEnabled end
-    print("Config loaded")
+    print("Config loaded (slider values only)")
 end
 
 -- ===== HITBOX EXTENDER FUNCTIONS =====
@@ -116,6 +104,7 @@ end
 
 local function updateHitboxes(scale)
     if not hitboxEnabled then return end
+    local count = 0
     for _, model in ipairs(Workspace:GetChildren()) do
         if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
             local ball = model:FindFirstChild("Ball.001")
@@ -137,39 +126,46 @@ local function updateHitboxes(scale)
             else
                 ball.Size = Vector3.new(2, 2, 2) * scale
             end
+            count = count + 1
+            if count % 50 == 0 then task.wait() end
         end
     end
 end
 
 local function removeHitboxes()
+    local count = 0
     for _, model in ipairs(Workspace:GetChildren()) do
         if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
             local ball = model:FindFirstChild("Ball.001")
             if ball then ball:Destroy() end
+            count = count + 1
+            if count % 50 == 0 then task.wait() end
         end
     end
 end
 
 local function toggleHitboxExtender(enable)
     hitboxEnabled = enable
-    if enable then
-        if not hitboxBallAddedConnection then
-            hitboxBallAddedConnection = Workspace.ChildAdded:Connect(function(child)
-                if child:IsA("Model") and child.Name:match("^CLIENT_BALL_%d+$") then
-                    task.wait(0.1)
-                    if hitboxEnabled then updateHitboxes(hitboxSize) end
-                end
-            end)
+    task.spawn(function() -- Spawn this so it never blocks the UI
+        if enable then
+            if not hitboxBallAddedConnection then
+                hitboxBallAddedConnection = Workspace.ChildAdded:Connect(function(child)
+                    if child:IsA("Model") and child.Name:match("^CLIENT_BALL_%d+$") then
+                        task.wait(0.1)
+                        if hitboxEnabled then updateHitboxes(hitboxSize) end
+                    end
+                end)
+            end
+            updateHitboxes(hitboxSize)
+        else
+            if hitboxBallAddedConnection then
+                hitboxBallAddedConnection:Disconnect()
+                hitboxBallAddedConnection = nil
+            end
+            removeHitboxes()
         end
-        updateHitboxes(hitboxSize)
-    else
-        if hitboxBallAddedConnection then
-            hitboxBallAddedConnection:Disconnect()
-            hitboxBallAddedConnection = nil
-        end
-        removeHitboxes()
-    end
-    saveConfig()
+        saveConfig()
+    end)
 end
 
 -- ===== Main Frame =====
@@ -213,30 +209,42 @@ title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = M
 
--- Drag
-local mainDragging = false
-local mainDragStart, mainFrameStart
-M.InputBegan:Connect(function(input)
- if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-  mainDragging = true
-  mainDragStart = input.Position
-  mainFrameStart = M.Position
- end
+-- ===== 100% RELIABLE DRAG SYSTEM (Delta-based) =====
+local dragging = false
+local dragStartPos, mainFrameStartPos
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local pos = input.Position
+        local abs = M.AbsolutePosition
+        local size = M.AbsoluteSize
+        -- Check if click happened inside the UI bounds
+        if pos.X >= abs.X and pos.X <= abs.X + size.X and pos.Y >= abs.Y and pos.Y <= abs.Y + size.Y then
+            dragging = true
+            dragStartPos = pos
+            mainFrameStartPos = M.Position
+        end
+    end
 end)
-M.InputChanged:Connect(function(input)
- if mainDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-  local delta = input.Position - mainDragStart
-  local vs = C.ViewportSize
-  local newX = math.clamp(mainFrameStart.X.Offset + delta.X, 10, vs.X - M.AbsoluteSize.X - 10)
-  local newY = math.clamp(mainFrameStart.Y.Offset + delta.Y, -30, vs.Y - M.AbsoluteSize.Y - 10)
-  M.Position = UDim2.new(0, newX, 0, newY)
- end
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
 end)
-M.InputEnded:Connect(function(input)
- if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-  mainDragging = false
- end
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartPos
+        local vs = C.ViewportSize
+        local size = M.AbsoluteSize
+        M.Position = UDim2.new(
+            0, math.clamp(mainFrameStartPos.X.Offset + delta.X, 0, vs.X - size.X),
+            0, math.clamp(mainFrameStartPos.Y.Offset + delta.Y, 0, vs.Y - size.Y)
+        )
+    end
 end)
+-- ===== END RELIABLE DRAG SYSTEM =====
 
 -- Hide button
 local hideBtn = Instance.new("TextButton")
@@ -260,29 +268,36 @@ hStroke.Color = ACCENT
 hStroke.Thickness = 1
 hStroke.Parent = hideBtn
 
+-- ===== HIDE BUTTON DRAG (FIXED, NO SNAPPING) =====
 local hideDragging = false
-local hideDragStart, hideFrameStart
+local hideDragStartPos, hideBtnStartPos
+
 hideBtn.InputBegan:Connect(function(input)
- if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-  hideDragging = true
-  hideDragStart = input.Position
-  hideFrameStart = hideBtn.Position
- end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        hideDragging = true
+        hideDragStartPos = input.Position
+        hideBtnStartPos = hideBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                hideDragging = false
+            end
+        end)
+    end
 end)
-hideBtn.InputChanged:Connect(function(input)
- if hideDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-  local delta = input.Position - hideDragStart
-  local vs = C.ViewportSize
-  local newX = math.clamp(hideFrameStart.X.Offset + delta.X, 0, vs.X - hideBtn.AbsoluteSize.X)
-  local newY = math.clamp(hideFrameStart.Y.Offset + delta.Y, 0, vs.Y - hideBtn.AbsoluteSize.Y)
-  hideBtn.Position = UDim2.new(0, newX, 0, newY)
- end
+
+UserInputService.InputChanged:Connect(function(input)
+    if hideDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - hideDragStartPos
+        local vs = C.ViewportSize
+        local size = hideBtn.AbsoluteSize
+        hideBtn.Position = UDim2.new(
+            0, math.clamp(hideBtnStartPos.X.Offset + delta.X, 0, vs.X - size.X),
+            0, math.clamp(hideBtnStartPos.Y.Offset + delta.Y, 0, vs.Y - size.Y)
+        )
+    end
 end)
-hideBtn.InputEnded:Connect(function(input)
- if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-  hideDragging = false
- end
-end)
+-- ===== END HIDE BUTTON FIX =====
+
 C:GetPropertyChangedSignal("ViewportSize"):Connect(function()
  local vs = C.ViewportSize
  hideBtn.Position = UDim2.new(0, math.clamp(hideBtn.AbsolutePosition.X, 0, vs.X - hideBtn.AbsoluteSize.X), 0, math.clamp(hideBtn.AbsolutePosition.Y, 0, vs.Y - hideBtn.AbsoluteSize.Y))
@@ -301,7 +316,7 @@ tabContainer.Parent = M
 
 -- Scrolling Content Area
 local contentArea = Instance.new("ScrollingFrame")
-contentArea.Size = UDim2.new(1, -76, 1, -36)
+contentArea.Size = UDim2.new(1, -84, 1, -36)
 contentArea.Position = UDim2.new(0, 76, 0, 28)
 contentArea.BackgroundTransparency = 1
 contentArea.BorderSizePixel = 0
@@ -310,6 +325,10 @@ contentArea.AutomaticCanvasSize = Enum.AutomaticSize.Y
 contentArea.ScrollBarThickness = 6
 contentArea.ScrollBarImageColor3 = ACCENT
 contentArea.Parent = M
+
+local contentPad = Instance.new("UIPadding")
+contentPad.PaddingRight = UDim.new(0, 8)
+contentPad.Parent = contentArea
 
 local contentLayout = Instance.new("UIListLayout")
 contentLayout.Padding = UDim.new(0, 4)
@@ -327,7 +346,7 @@ local tabButtons = {}
 
 local function clearContent()
  for _, child in ipairs(contentArea:GetChildren()) do
-  if child ~= contentLayout then child:Destroy() end
+  if child ~= contentLayout and child ~= contentPad then child:Destroy() end
  end
  contentArea.CanvasSize = UDim2.new(0, 0, 0, 0)
 end
@@ -451,7 +470,7 @@ local function CreateReliableToggle(parent, labelText, initialState, callback)
  }
 end
 
--- ===== Helper: Slider (compact, no overflow) =====
+-- ===== Helper: Slider =====
 local function CreateSliderWithInput(parent, labelText, min, max, default, desc, callback, unit)
  unit = unit or "s"
  local row = Instance.new("Frame")
@@ -462,7 +481,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  Instance.new("UICorner").CornerRadius = UDim.new(0, 10) Parent = row
 
  local label = Instance.new("TextLabel")
- label.Size = UDim2.new(0.6, 0, 0, 18)
+ label.Size = UDim2.new(0.5, 0, 0, 18)
  label.Position = UDim2.new(0, 8, 0, 2)
  label.BackgroundTransparency = 1
  label.Text = labelText
@@ -473,8 +492,8 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  label.Parent = row
 
  local valueLabel = Instance.new("TextLabel")
- valueLabel.Size = UDim2.new(0.3, 0, 0, 18)
- valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
+ valueLabel.Size = UDim2.new(0, 50, 0, 18)
+ valueLabel.Position = UDim2.new(1, -8, 0, 2)
  valueLabel.BackgroundTransparency = 1
  valueLabel.Text = string.format("%.2f", default) .. unit
  valueLabel.TextColor3 = TEXT_PRIMARY
@@ -533,8 +552,8 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  knobStroke.Parent = knob
 
  local input = Instance.new("TextBox")
- input.Size = UDim2.new(0, 46, 0, 22)
- input.Position = UDim2.new(1, -48, 0, 40)
+ input.Size = UDim2.new(0, 44, 0, 22)
+ input.Position = UDim2.new(1, -52, 0, 40)
  input.BackgroundColor3 = BG_BUTTON
  input.BorderSizePixel = 0
  input.Text = string.format("%.2f", default)
@@ -948,7 +967,6 @@ function buildCharacterTab()
     -- Hitbox Extender
     CreateReliableToggle(contentArea, "Hitbox Extender", hitboxEnabled, function(v)
         toggleHitboxExtender(v)
-        saveConfig()
     end)
 
     CreateSliderWithInput(
@@ -964,14 +982,18 @@ function buildCharacterTab()
         ""
     )
 
-    -- Apply initial states to existing character
-    local char = LP.Character
-    if char then
-        if boostEnabled then applyBoostFull(char) end
-        if shiftlockEnabled then setupShiftlock(char) end
-        if asyncDesyncEnabled then setupAsyncDesync(char) end
-        if hitboxEnabled then updateHitboxes(hitboxSize) end
-    end
+    -- Apply initial states in the background so the UI doesn't freeze
+    -- (They default to OFF now, so this will only apply if you manually turn them on later)
+    task.spawn(function()
+        local char = LP.Character
+        if char then
+            if boostEnabled then applyBoostFull(char) end
+            if shiftlockEnabled then setupShiftlock(char) end
+            if asyncDesyncEnabled then setupAsyncDesync(char) end
+            if hitboxEnabled then toggleHitboxExtender(true) end
+            if hitboxSize > 0 and hitboxEnabled then updateHitboxes(hitboxSize) end
+        end
+    end)
 end
 
 function buildAutomationTab()
@@ -1141,7 +1163,9 @@ Workspace.DescendantAdded:Connect(function(obj)
  end)
 end)
 
--- Load config and initialize
-loadConfig()
-switchTab("Character")
-print("JHub Pill ready with config save/load")
+-- ===== INSTANT LOAD INITIALIZATION =====
+task.spawn(function()
+    loadConfig()
+    switchTab("Character")
+    print("JHub Pill ready with config save/load (all features default OFF)")
+end)
