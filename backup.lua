@@ -37,25 +37,24 @@ local WARNING_BG = Color3.fromRGB(70, 50, 20)
 local WARNING_TEXT = Color3.fromRGB(255, 220, 150)
 
 -- ===== Persistent state variables =====
--- Force default to OFF (These will be reset to false on every load)
 local boostEnabled = false
 local shiftlockEnabled = false
 local espEnabled = false
 local antiLagEnabled = false
 local asyncDesyncEnabled = false
-local desyncDuration = 0.3
+local desyncDuration = 0.3          -- Always resets to 0.3
 local ASYNC_COOLDOWN = 0.3
 
 -- ===== HITBOX EXTENDER STATE =====
 local hitboxEnabled = false
-local hitboxSize = 5.0
+local hitboxSize = 2.5              -- Always resets to 2.5
 local hitboxBallAddedConnection = nil
 
 -- ===== CONFIG FILE =====
 local configPath = "JHubConfig.json"
 
 local function saveConfig()
-    -- ONLY saving slider sizes and duration; NOT saving toggle states!
+    -- Still saves the current values if the user changes them during the session
     local config = {
         hitboxSize = hitboxSize,
         desyncDuration = desyncDuration,
@@ -66,30 +65,12 @@ local function saveConfig()
 end
 
 local function loadConfig()
+    -- We no longer load hitboxSize or desyncDuration so they always start at the defaults above
     if not isfile(configPath) then
         print("No config file found, using defaults")
         return
     end
-    local json = readfile(configPath)
-    if json == "" then
-        print("Config file is empty, using defaults")
-        return
-    end
-    local success, config = pcall(HttpService.JSONDecode, HttpService, json)
-    if not success then
-        print("Config parse failed, using defaults")
-        return
-    end
-    
-    -- LOAD ONLY SLIDER VALUES: Ignore all booleans so features default to OFF!
-    if config.hitboxSize then
-        hitboxSize = config.hitboxSize
-    end
-    if config.desyncDuration then
-        desyncDuration = config.desyncDuration
-        ASYNC_COOLDOWN = desyncDuration
-    end
-    print("Config loaded (slider values only)")
+    print("Config file exists but slider defaults are forced (0.3 / 2.5)")
 end
 
 -- ===== HITBOX EXTENDER FUNCTIONS =====
@@ -146,7 +127,7 @@ end
 
 local function toggleHitboxExtender(enable)
     hitboxEnabled = enable
-    task.spawn(function() -- Spawn this so it never blocks the UI
+    task.spawn(function()
         if enable then
             if not hitboxBallAddedConnection then
                 hitboxBallAddedConnection = Workspace.ChildAdded:Connect(function(child)
@@ -218,7 +199,6 @@ UserInputService.InputBegan:Connect(function(input)
         local pos = input.Position
         local abs = M.AbsolutePosition
         local size = M.AbsoluteSize
-        -- Check if click happened inside the UI bounds
         if pos.X >= abs.X and pos.X <= abs.X + size.X and pos.Y >= abs.Y and pos.Y <= abs.Y + size.Y then
             dragging = true
             dragStartPos = pos
@@ -268,7 +248,7 @@ hStroke.Color = ACCENT
 hStroke.Thickness = 1
 hStroke.Parent = hideBtn
 
--- ===== HIDE BUTTON DRAG (FIXED, NO SNAPPING) =====
+-- ===== HIDE BUTTON DRAG =====
 local hideDragging = false
 local hideDragStartPos, hideBtnStartPos
 
@@ -314,7 +294,6 @@ tabContainer.Position = UDim2.new(0, 0, 0, 28)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = M
 
--- Scrolling Content Area
 local contentArea = Instance.new("ScrollingFrame")
 contentArea.Size = UDim2.new(1, -84, 1, -36)
 contentArea.Position = UDim2.new(0, 76, 0, 28)
@@ -368,7 +347,6 @@ local function switchTab(tabName)
  elseif tabName == "Automation" then buildAutomationTab() end
 end
 
--- Tab buttons
 local tabsOrder = {"Character", "Automation"}
 for i, tabName in ipairs(tabsOrder) do
  local btn = Instance.new("TextButton")
@@ -619,7 +597,7 @@ local function CreateSliderWithInput(parent, labelText, min, max, default, desc,
  }
 end
 
--- ===== Global functions (boost, shiftlock, esp, anti‑lag, desync) =====
+-- ===== Global functions =====
 local boostConnection = nil
 local speedLoopConnection = nil
 local stateConnection = nil
@@ -634,40 +612,10 @@ local shiftlockJumping = false
 
 local espBeams = {}
 local OriginalStates = {}
-local SavedSkybox, SavedAtmosphere, SavedLightingTech, SavedGlobalShadows = nil, nil, nil, nil
-local SavedQualityLevel = nil
 local asyncConnection = nil
 local lastTriggerTime = 0
 local MIN_INTERVAL = 0.5
 local BANDWIDTH_LOW = 1
-
-local function applySpeedBasedOnState(humanoid)
- if not humanoid then return end
- if not boostEnabled then humanoid.WalkSpeed = originalWalkSpeed return end
- local state = humanoid:GetState()
- if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Sprinting then
-  humanoid.WalkSpeed = originalWalkSpeed * 1.15
- else
-  humanoid.WalkSpeed = originalWalkSpeed
- end
-end
-
-local function onStateChanged() applySpeedBasedOnState(currentHumanoid) end
-
-local function setupSpeedLogic(character)
- if not character then return end
- local hum = character:FindFirstChildOfClass("Humanoid")
- if not hum then return end
- currentHumanoid = hum
- if originalWalkSpeed == 16 then originalWalkSpeed = hum.WalkSpeed end
- if stateConnection then stateConnection:Disconnect() end
- if speedLoopConnection then speedLoopConnection:Disconnect() end
- stateConnection = hum.StateChanged:Connect(onStateChanged)
- speedLoopConnection = RunService.Heartbeat:Connect(function()
-  if hum and hum.Parent then applySpeedBasedOnState(hum) end
- end)
- applySpeedBasedOnState(hum)
-end
 
 local function applyBoostJump(character)
  if not character then return end
@@ -686,7 +634,6 @@ local function applyBoostJump(character)
 end
 
 local function applyBoostFull(character)
- setupSpeedLogic(character)
  applyBoostJump(character)
 end
 
@@ -732,92 +679,95 @@ local function IsESPDown(obj)
  return false
 end
 
+-- ===== SMARTER ANTI-LAG =====
 local function SaveOriginalState(obj)
  if OriginalStates[obj] then return end
  local state = {}
- if obj:IsA("BasePart") then
-  state.Material = obj.Material
-  state.Color = obj.Color
-  state.Reflectance = obj.Reflectance
-  if obj:IsA("MeshPart") then state.TextureID = obj.TextureID end
- elseif obj:IsA("Texture") or obj:IsA("Decal") then
-  state.Texture = obj.Texture
-  state.Transparency = obj.Transparency
- elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+ if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+  state.Rate = obj.Rate
+  state.Lifetime = obj.Lifetime
+  state.Enabled = obj.Enabled
+ elseif obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
   state.Enabled = obj.Enabled
  elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
   state.Enabled = obj.Enabled
   state.Brightness = obj.Brightness
+ elseif obj:IsA("DepthOfFieldEffect") then
+  state.Enabled = obj.Enabled
  end
  if next(state) then OriginalStates[obj] = state end
 end
 
 local function ApplyAntiLag()
  local lighting = game:GetService("Lighting")
- local sky = lighting:FindFirstChildOfClass("Sky")
- if sky and not SavedSkybox then SavedSkybox = sky:Clone() sky.Parent = nil end
- local atm = lighting:FindFirstChildOfClass("Atmosphere")
- if atm and not SavedAtmosphere then SavedAtmosphere = atm:Clone() atm.Parent = nil end
- for _, cloud in ipairs(lighting:GetChildren()) do
-  if cloud:IsA("Clouds") then pcall(function() cloud.Parent = nil end) end
- end
+
  for _, effect in ipairs(lighting:GetChildren()) do
-  if effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
-   pcall(function() effect.Enabled = false end)
+  if effect:IsA("DepthOfFieldEffect") then
+   SaveOriginalState(effect)
+   effect.Enabled = false
   end
  end
- pcall(function()
-  if not SavedLightingTech then SavedLightingTech = lighting.Technology SavedGlobalShadows = lighting.GlobalShadows end
-  lighting.GlobalShadows = false
- end)
- pcall(function()
-  if settings() and settings().Rendering then
-   if not SavedQualityLevel then SavedQualityLevel = settings().Rendering.QualityLevel end
-   settings().Rendering.QualityLevel = Enum.QualityLevel.Level05
-  end
- end)
+
  for _, obj in ipairs(Workspace:GetDescendants()) do
   pcall(function()
-   if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+   if obj:IsA("Fire") or obj:IsA("Smoke") then
+    SaveOriginalState(obj)
+    obj.Enabled = false
+   elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+    SaveOriginalState(obj)
+    if obj:IsA("ParticleEmitter") then
+     obj.Rate = math.max(obj.Rate * 0.25, 1)
+     if obj.Lifetime and typeof(obj.Lifetime) == "NumberRange" then
+      obj.Lifetime = NumberRange.new(obj.Lifetime.Min * 0.6, obj.Lifetime.Max * 0.6)
+     end
+    elseif obj:IsA("Trail") then
+     obj.Lifetime = obj.Lifetime * 0.5
+    end
+   elseif obj:IsA("Sparkles") then
     SaveOriginalState(obj)
     obj.Enabled = false
    elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
     SaveOriginalState(obj)
-    obj.Enabled = false
+    obj.Brightness = obj.Brightness * 0.35
    end
   end)
  end
+
  pcall(function()
   local terrain = Workspace:FindFirstChildOfClass("Terrain")
-  if terrain then terrain.WaterWaveSize = 0 terrain.WaterWaveSpeed = 0 terrain.WaterTransparency = 0.5 end
+  if terrain then
+   terrain.WaterWaveSize = 0.08
+   terrain.WaterWaveSpeed = 6
+  end
  end)
 end
 
 local function RestoreOriginal()
- local lighting = game:GetService("Lighting")
- if SavedSkybox then pcall(function() SavedSkybox.Parent = lighting end) SavedSkybox = nil end
- if SavedAtmosphere then pcall(function() SavedAtmosphere.Parent = lighting end) SavedAtmosphere = nil end
- pcall(function()
-  if SavedLightingTech then lighting.Technology = SavedLightingTech end
-  if SavedGlobalShadows ~= nil then lighting.GlobalShadows = SavedGlobalShadows end
- end)
- pcall(function()
-  if settings() and settings().Rendering and SavedQualityLevel then settings().Rendering.QualityLevel = SavedQualityLevel end
- end)
  for obj, state in pairs(OriginalStates) do
   pcall(function()
-   if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+   if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+    if state.Rate then obj.Rate = state.Rate end
+    if state.Lifetime then obj.Lifetime = state.Lifetime end
+    if state.Enabled ~= nil then obj.Enabled = state.Enabled end
+   elseif obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
    elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
     if state.Enabled ~= nil then obj.Enabled = state.Enabled end
     if state.Brightness then obj.Brightness = state.Brightness end
+   elseif obj:IsA("DepthOfFieldEffect") then
+    if state.Enabled ~= nil then obj.Enabled = state.Enabled end
    end
   end)
  end
+
  pcall(function()
   local terrain = Workspace:FindFirstChildOfClass("Terrain")
-  if terrain then terrain.WaterWaveSize = 0.15 terrain.WaterWaveSpeed = 10 terrain.WaterTransparency = 0.3 end
+  if terrain then
+   terrain.WaterWaveSize = 0.15
+   terrain.WaterWaveSpeed = 10
+  end
  end)
+
  OriginalStates = {}
 end
 
@@ -885,24 +835,19 @@ end
 
 -- ===== Build Tabs =====
 function buildCharacterTab()
-    -- Kazana Jump
     CreateReliableToggle(contentArea, "Kazana Jump", boostEnabled, function(v)
         boostEnabled = v
         local char = LP.Character
         if char then
-            if boostEnabled then applyBoostFull(char)
+            if boostEnabled then 
+                applyBoostFull(char)
             else
-                if stateConnection then stateConnection:Disconnect() stateConnection = nil end
-                if speedLoopConnection then speedLoopConnection:Disconnect() speedLoopConnection = nil end
                 if boostConnection then boostConnection:Disconnect() boostConnection = nil end
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then hum.WalkSpeed = originalWalkSpeed end
             end
         end
         saveConfig()
     end)
 
-    -- Auto Shiftlock
     CreateReliableToggle(contentArea, "Auto Shiftlock", shiftlockEnabled, function(v)
         shiftlockEnabled = v
         if v then
@@ -914,7 +859,6 @@ function buildCharacterTab()
         saveConfig()
     end)
 
-    -- Direction Facing ESP
     CreateReliableToggle(contentArea, "Direction Facing ESP", espEnabled, function(v)
         espEnabled = v
         if not v then
@@ -926,14 +870,12 @@ function buildCharacterTab()
         saveConfig()
     end)
 
-    -- Anti-Lag
     CreateReliableToggle(contentArea, "Anti-Lag", antiLagEnabled, function(v)
         antiLagEnabled = v
         if v then ApplyAntiLag() else RestoreOriginal() end
         saveConfig()
     end)
 
-    -- Async Desync + slider visibility
     local sliderRow = nil
     CreateReliableToggle(contentArea, "Async Desync", asyncDesyncEnabled, function(v)
         asyncDesyncEnabled = v
@@ -948,7 +890,6 @@ function buildCharacterTab()
         saveConfig()
     end)
 
-    -- Desync Duration slider
     local slider = CreateSliderWithInput(
         contentArea,
         "Desync Duration",
@@ -964,7 +905,6 @@ function buildCharacterTab()
     sliderRow = slider.row
     sliderRow.Visible = asyncDesyncEnabled
 
-    -- Hitbox Extender
     CreateReliableToggle(contentArea, "Hitbox Extender", hitboxEnabled, function(v)
         toggleHitboxExtender(v)
     end)
@@ -982,8 +922,6 @@ function buildCharacterTab()
         ""
     )
 
-    -- Apply initial states in the background so the UI doesn't freeze
-    -- (They default to OFF now, so this will only apply if you manually turn them on later)
     task.spawn(function()
         local char = LP.Character
         if char then
@@ -997,7 +935,6 @@ function buildCharacterTab()
 end
 
 function buildAutomationTab()
-    -- Warning labels
     local warn1 = Instance.new("Frame")
     warn1.Size = UDim2.new(1, 0, 0, 26)
     warn1.BackgroundColor3 = WARNING_BG
@@ -1046,7 +983,6 @@ function buildAutomationTab()
     l2.TextXAlignment = Enum.TextXAlignment.Center
     l2.Parent = warn2
 
-    -- Inf toggles
     local styleToggle = CreateReliableToggle(contentArea, "Inf Lucky Style Spins", rankedEnabled.style, function(v)
         rankedEnabled.style = v
         updateRankedLoop()
@@ -1147,16 +1083,32 @@ Players.PlayerRemoving:Connect(function(p)
  end
 end)
 
--- Anti-lag new objects
+-- Anti-lag new objects (smarter version)
 Workspace.DescendantAdded:Connect(function(obj)
  if not antiLagEnabled then return end
- wait(0.1)
+ task.wait(0.1)
  pcall(function()
   if obj:IsA("Beam") and IsESPDown(obj) then return end
-  if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+  if obj:IsA("Fire") or obj:IsA("Smoke") then
+   SaveOriginalState(obj)
+   obj.Enabled = false
+  elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+   SaveOriginalState(obj)
+   if obj:IsA("ParticleEmitter") then
+    obj.Rate = math.max(obj.Rate * 0.25, 1)
+    if obj.Lifetime and typeof(obj.Lifetime) == "NumberRange" then
+     obj.Lifetime = NumberRange.new(obj.Lifetime.Min * 0.6, obj.Lifetime.Max * 0.6)
+    end
+   elseif obj:IsA("Trail") then
+    obj.Lifetime = obj.Lifetime * 0.5
+   end
+  elseif obj:IsA("Sparkles") then
    SaveOriginalState(obj)
    obj.Enabled = false
   elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+   SaveOriginalState(obj)
+   obj.Brightness = obj.Brightness * 0.35
+  elseif obj:IsA("DepthOfFieldEffect") then
    SaveOriginalState(obj)
    obj.Enabled = false
   end
@@ -1167,5 +1119,5 @@ end)
 task.spawn(function()
     loadConfig()
     switchTab("Character")
-    print("JHub Pill ready with config save/load (all features default OFF)")
+    print("JHub Pill ready - Desync default 0.3 | Hitbox default 2.5")
 end)
