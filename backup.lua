@@ -1,172 +1,312 @@
 -- Polyfills
-if not math.clamp then math.clamp = function(v, min, max) if v < min then return min end if v > max then return max end return v end end
-if not spawn then spawn = function(f) coroutine.wrap(f)() end end
-if not delay then delay = function(t, f) spawn(function() wait(t) f() end) end end
+if not math.clamp then
+	math.clamp = function(v, min, max)
+		if v < min then return min end
+		if v > max then return max end
+		return v
+	end
+end
 
-print("=== JHub Mobile Pill ===")
+print("=== JOSSEPOPSIER ===")
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
-local C = workspace.CurrentCamera
+local Camera = Workspace.CurrentCamera
 
-local PG = LP:FindFirstChild("PlayerGui")
-if not PG then for i = 1, 100 do wait(0.1) PG = LP:FindFirstChild("PlayerGui") if PG then break end end end
-if not PG then warn("PlayerGui not found") return end
-if PG:FindFirstChild("JHub") then PG.JHub:Destroy() end
+local PG = LP:WaitForChild("PlayerGui")
+if PG:FindFirstChild("JOSSEPOPSIER") then
+	PG.JOSSEPOPSIER:Destroy()
+end
 
 local UI = Instance.new("ScreenGui")
-UI.Name = "JHub"
+UI.Name = "JOSSEPOPSIER"
 UI.ResetOnSpawn = false
+UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 UI.Parent = PG
 
 -- Colors
-local ACCENT       = Color3.fromRGB(225, 55, 85)
-local BG_MAIN      = Color3.fromRGB(16, 16, 20)
-local BG_PANEL     = Color3.fromRGB(24, 24, 30)
-local BG_ELEMENT   = Color3.fromRGB(32, 32, 40)
-local TEXT_MAIN    = Color3.fromRGB(245, 245, 250)
-local TEXT_SECOND  = Color3.fromRGB(180, 180, 190)
-local TEXT_DIM     = Color3.fromRGB(120, 120, 130)
-local STROKE       = Color3.fromRGB(50, 50, 60)
+local ACCENT     = Color3.fromRGB(145, 70, 255)
+local BG_MAIN    = Color3.fromRGB(16, 16, 22)
+local BG_SIDE    = Color3.fromRGB(22, 22, 30)
+local BG_CARD    = Color3.fromRGB(30, 30, 40)
+local BG_BTN     = Color3.fromRGB(40, 40, 52)
+local TEXT_MAIN  = Color3.fromRGB(245, 245, 250)
+local TEXT_DIM   = Color3.fromRGB(140, 140, 155)
 
--- State
-local boostEnabled = false
-local shiftlockEnabled = false
-local espEnabled = false
-local antiLagEnabled = false
-local asyncDesyncEnabled = false
-local desyncDuration = 0.3
-local ASYNC_COOLDOWN = 0.3
+-- ===================== STATES =====================
 local hitboxEnabled = false
 local hitboxSize = 5
-local hitboxBallAddedConnection = nil
+local hitboxVisible = true
+local hitboxConn = nil
 
-local configPath = "JHubConfig.json"
+local maxServeEnabled = false
+local maxServeHook = nil
 
-local function saveConfig()
-	pcall(function()
-		writefile(configPath, HttpService:JSONEncode({
-			hitboxSize = hitboxSize,
-			desyncDuration = desyncDuration
-		}))
-	end)
-end
+local shiftlockEnabled = false
+local asyncDesyncEnabled = false
+local desyncDuration = 0.15
+local lastDesync = 0
+local desyncConn = nil
 
-local function loadConfig()
-	print("Defaults forced: Desync 0.3 | Hitbox 5")
-end
+local espEnabled = false
+local espBeams = {}
 
--- Hitbox
-local function findFirstPart(model)
-	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") then return d end
-	end
-end
+local facingUntil = 0
+local facingConn, jumpConn = nil, nil
 
+-- ===================== FEATURES =====================
 local function updateHitboxes(scale)
-	if not hitboxEnabled then return end
-	local count = 0
 	for _, model in ipairs(Workspace:GetChildren()) do
 		if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
 			local ball = model:FindFirstChild("Ball.001")
-			if not ball then
-				local base = findFirstPart(model)
-				if base then
-					ball = Instance.new("Part")
-					ball.Name = "Ball.001"
-					ball.Shape = Enum.PartType.Ball
+			if hitboxEnabled then
+				if not ball then
+					local base = model:FindFirstChildWhichIsA("BasePart", true)
+					if base then
+						ball = Instance.new("Part")
+						ball.Name = "Ball.001"
+						ball.Shape = Enum.PartType.Ball
+						ball.Size = Vector3.new(2, 2, 2) * scale
+						ball.CFrame = base.CFrame
+						ball.Anchored = true
+						ball.CanCollide = false
+						ball.Material = Enum.Material.ForceField
+						ball.Color = Color3.fromRGB(80, 255, 120)
+						ball.Parent = model
+					end
+				else
 					ball.Size = Vector3.new(2, 2, 2) * scale
-					ball.CFrame = base.CFrame
-					ball.Anchored = true
-					ball.CanCollide = false
-					ball.Transparency = 0.7
-					ball.Material = Enum.Material.ForceField
-					ball.Color = Color3.fromRGB(255, 50, 50)
-					ball.Parent = model
+				end
+				if ball then
+					ball.Transparency = hitboxVisible and 0.7 or 1
 				end
 			else
-				ball.Size = Vector3.new(2, 2, 2) * scale
+				if ball then ball:Destroy() end
 			end
-			count += 1
-			if count % 50 == 0 then task.wait() end
 		end
 	end
 end
 
-local function removeHitboxes()
-	for _, model in ipairs(Workspace:GetChildren()) do
-		if model:IsA("Model") and model.Name:match("^CLIENT_BALL_%d+$") then
-			local ball = model:FindFirstChild("Ball.001")
-			if ball then ball:Destroy() end
+local function toggleHitbox(state)
+	hitboxEnabled = state
+	if state then
+		if not hitboxConn then
+			hitboxConn = Workspace.ChildAdded:Connect(function(c)
+				if c:IsA("Model") and c.Name:match("^CLIENT_BALL_") then
+					task.wait(0.2)
+					if hitboxEnabled then updateHitboxes(hitboxSize) end
+				end
+			end)
+		end
+		updateHitboxes(hitboxSize)
+	else
+		if hitboxConn then
+			hitboxConn:Disconnect()
+			hitboxConn = nil
+		end
+		for _, model in ipairs(Workspace:GetChildren()) do
+			if model:IsA("Model") and model.Name:match("^CLIENT_BALL_") then
+				local b = model:FindFirstChild("Ball.001")
+				if b then b:Destroy() end
+			end
 		end
 	end
 end
 
-local function toggleHitboxExtender(enable)
-	hitboxEnabled = enable
-	task.spawn(function()
-		if enable then
-			if not hitboxBallAddedConnection then
-				hitboxBallAddedConnection = Workspace.ChildAdded:Connect(function(child)
-					if child:IsA("Model") and child.Name:match("^CLIENT_BALL_%d+$") then
-						task.wait(0.1)
-						if hitboxEnabled then updateHitboxes(hitboxSize) end
+local function setMaxServe(state)
+	maxServeEnabled = state
+	if state and not maxServeHook then
+		maxServeHook = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+			local method = getnamecallmethod()
+			if maxServeEnabled and method == "InvokeServer" then
+				local name = tostring(self.Name):lower()
+				if name:find("serve") or name:find("toss") then
+					local args = {...}
+					for i = 1, #args do
+						if typeof(args[i]) == "number" and args[i] < 100 then
+							args[i] = 100
+						end
 					end
-				end)
+					return maxServeHook(self, unpack(args))
+				end
 			end
-			updateHitboxes(hitboxSize)
-		else
-			if hitboxBallAddedConnection then
-				hitboxBallAddedConnection:Disconnect()
-				hitboxBallAddedConnection = nil
-			end
-			removeHitboxes()
-		end
-		saveConfig()
+			return maxServeHook(self, ...)
+		end))
+	end
+end
+
+local function applyDesync(state)
+	pcall(function()
+		setfflag("PhysicsSenderMaxBandwidthBps", state and "1" or "999999")
 	end)
 end
 
--- Main Window
-local M = Instance.new("Frame")
-M.Size = UDim2.new(0, 360, 0, 320)
-M.Position = UDim2.new(0.5, -180, 0.5, -160)
-M.BackgroundColor3 = BG_MAIN
-M.BorderSizePixel = 0
-M.Active = true
-M.Parent = UI
+local function onJump()
+	if not asyncDesyncEnabled then return end
+	local now = tick()
+	if now - lastDesync < 0.40 then return end
+	lastDesync = now
+	applyDesync(true)
+	task.delay(desyncDuration, function()
+		applyDesync(false)
+	end)
+end
 
-Instance.new("UICorner", M).CornerRadius = UDim.new(0, 14)
-local stroke = Instance.new("UIStroke", M)
-stroke.Color = STROKE
+local function setupDesync(char)
+	if desyncConn then desyncConn:Disconnect() end
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		desyncConn = hum.Jumping:Connect(onJump)
+	end
+end
+
+local function setupShiftlock(char)
+	if facingConn then facingConn:Disconnect() end
+	if jumpConn then jumpConn:Disconnect() end
+
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+
+	facingConn = RunService.RenderStepped:Connect(function()
+		if tick() < facingUntil and shiftlockEnabled and root.Parent then
+			local look = Camera.CFrame.LookVector
+			local flat = Vector3.new(look.X, 0, look.Z)
+			if flat.Magnitude > 0.1 then
+				root.CFrame = CFrame.new(root.Position, root.Position + flat.Unit)
+			end
+		end
+	end)
+
+	jumpConn = hum.Jumping:Connect(function()
+		if shiftlockEnabled then
+			facingUntil = tick() + 0.15
+		end
+	end)
+end
+
+local function clearESP()
+	for _, data in pairs(espBeams) do
+		pcall(function()
+			if data.Beam then data.Beam:Destroy() end
+			if data.A0 then data.A0:Destroy() end
+			if data.A1 then data.A1:Destroy() end
+		end)
+	end
+	table.clear(espBeams)
+end
+
+RunService.RenderStepped:Connect(function()
+	if not espEnabled then return end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LP then
+			local char = player.Character
+			if char then
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")
+				
+				if hum and hum.Health > 0 and root then
+					local data = espBeams[player]
+					if not data then
+						local a0 = Instance.new("Attachment")
+						a0.Parent = Workspace.Terrain
+						local a1 = Instance.new("Attachment")
+						a1.Parent = Workspace.Terrain
+						local beam = Instance.new("Beam")
+						beam.Attachment0 = a0
+						beam.Attachment1 = a1
+						beam.Width0 = 0.35
+						beam.Width1 = 0.35
+						beam.Color = ColorSequence.new(Color3.fromRGB(255, 60, 60))
+						beam.FaceCamera = true
+						beam.Parent = Workspace.Terrain
+						data = {Beam = beam, A0 = a0, A1 = a1}
+						espBeams[player] = data
+					end
+
+					local look = root.CFrame.LookVector
+					local dir = Vector3.new(look.X, 0, look.Z)
+					if dir.Magnitude > 0.05 then
+						dir = dir.Unit
+						data.A0.WorldPosition = root.Position + dir * 0.7
+						data.A1.WorldPosition = root.Position + dir * 50
+					end
+				end
+			end
+		end
+	end
+
+	for player, data in pairs(espBeams) do
+		if not player.Parent then
+			pcall(function()
+				data.Beam:Destroy()
+				data.A0:Destroy()
+				data.A1:Destroy()
+			end)
+			espBeams[player] = nil
+		end
+	end
+end)
+
+-- ===================== UI =====================
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 460, 0, 340)
+Main.Position = UDim2.new(0.5, -230, 0.5, -170)
+Main.BackgroundColor3 = BG_MAIN
+Main.BorderSizePixel = 0
+Main.Parent = UI
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(50, 50, 65)
 stroke.Thickness = 1
+stroke.Transparency = 0.3
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -20, 0, 24)
-title.Position = UDim2.new(0, 14, 0, 8)
+title.Size = UDim2.new(1, -20, 0, 22)
+title.Position = UDim2.new(0, 16, 0, 10)
 title.BackgroundTransparency = 1
 title.Text = "JOSSEPOPSIER"
-title.TextColor3 = TEXT_MAIN
+title.TextColor3 = ACCENT
 title.Font = Enum.Font.GothamBold
-title.TextSize = 15
+title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = M
+title.Parent = Main
 
--- Drag
-local dragging, dragStart, startPos
-UserInputService.InputBegan:Connect(function(input)
+local sub = Instance.new("TextLabel")
+sub.Size = UDim2.new(1, -20, 0, 14)
+sub.Position = UDim2.new(0, 16, 0, 30)
+sub.BackgroundTransparency = 1
+sub.Text = "Volleyball Legends"
+sub.TextColor3 = TEXT_DIM
+sub.Font = Enum.Font.Gotham
+sub.TextSize = 11
+sub.TextXAlignment = Enum.TextXAlignment.Left
+sub.Parent = Main
+
+-- Drag + Clamp
+local dragging, dragStart, startPos = false, nil, nil
+Main.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		local pos = input.Position
-		local abs = M.AbsolutePosition
-		local size = M.AbsoluteSize
-		if pos.X >= abs.X and pos.X <= abs.X + size.X and pos.Y >= abs.Y and pos.Y <= abs.Y + size.Y then
-			dragging = true
-			dragStart = pos
-			startPos = M.AbsolutePosition
-		end
+		dragging = true
+		dragStart = input.Position
+		startPos = Main.AbsolutePosition
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		local viewport = Camera.ViewportSize
+		local size = Main.AbsoluteSize
+		local newX = math.clamp(startPos.X + delta.X, -size.X * 0.3, viewport.X - size.X * 0.7)
+		local newY = math.clamp(startPos.Y + delta.Y, -size.Y * 0.2, viewport.Y - size.Y * 0.7)
+		Main.Position = UDim2.new(0, newX, 0, newY)
 	end
 end)
 
@@ -176,150 +316,158 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		local vs = C.ViewportSize
-		local size = M.AbsoluteSize
-		M.Position = UDim2.new(0, math.clamp(startPos.X + delta.X, 0, vs.X - size.X), 0, math.clamp(startPos.Y + delta.Y, 0, vs.Y - size.Y))
-	end
-end)
-
 -- Hide Button
 local hideBtn = Instance.new("TextButton")
-hideBtn.Size = UDim2.new(0, 58, 0, 24)
-hideBtn.Position = UDim2.new(1, -70, 0, 8)
-hideBtn.BackgroundColor3 = BG_ELEMENT
+hideBtn.Size = UDim2.new(0, 70, 0, 30)
+hideBtn.Position = UDim2.new(1, -85, 0, 70)
+hideBtn.BackgroundColor3 = ACCENT
 hideBtn.Text = "HIDE"
 hideBtn.TextColor3 = TEXT_MAIN
 hideBtn.Font = Enum.Font.GothamBold
-hideBtn.TextSize = 11
-hideBtn.AutoButtonColor = false
+hideBtn.TextSize = 13
 hideBtn.Parent = UI
-Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(0, 7)
-Instance.new("UIStroke", hideBtn).Color = STROKE
+Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(0, 8)
 
-local hideDragging, hideDragStart, hideStartPos
+local uiVisible = true
+hideBtn.MouseButton1Click:Connect(function()
+	uiVisible = not uiVisible
+	Main.Visible = uiVisible
+	hideBtn.Text = uiVisible and "HIDE" or "SHOW"
+end)
+
+local hDragging, hDragStart, hStartPos
 hideBtn.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		hideDragging = true
-		hideDragStart = input.Position
-		hideStartPos = hideBtn.AbsolutePosition
+		hDragging = true
+		hDragStart = input.Position
+		hStartPos = hideBtn.AbsolutePosition
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if hideDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - hideDragStart
-		local vs = C.ViewportSize
+	if hDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - hDragStart
+		local viewport = Camera.ViewportSize
 		local size = hideBtn.AbsoluteSize
-		hideBtn.Position = UDim2.new(0, math.clamp(hideStartPos.X + delta.X, 0, vs.X - size.X), 0, math.clamp(hideStartPos.Y + delta.Y, 0, vs.Y - size.Y))
+		local newX = math.clamp(hStartPos.X + delta.X, -20, viewport.X - size.X + 20)
+		local newY = math.clamp(hStartPos.Y + delta.Y, -10, viewport.Y - size.Y + 10)
+		hideBtn.Position = UDim2.new(0, newX, 0, newY)
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		hideDragging = false
+		hDragging = false
 	end
-end)
-
-hideBtn.MouseButton1Click:Connect(function()
-	M.Visible = not M.Visible
-	hideBtn.Text = M.Visible and "HIDE" or "SHOW"
 end)
 
 -- Sidebar
 local sidebar = Instance.new("Frame")
-sidebar.Size = UDim2.new(0, 88, 1, -44)
-sidebar.Position = UDim2.new(0, 10, 0, 38)
-sidebar.BackgroundColor3 = BG_PANEL
+sidebar.Size = UDim2.new(0, 105, 1, -55)
+sidebar.Position = UDim2.new(0, 10, 0, 50)
+sidebar.BackgroundColor3 = BG_SIDE
 sidebar.BorderSizePixel = 0
-sidebar.Parent = M
+sidebar.Parent = Main
 Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 10)
 
 local content = Instance.new("ScrollingFrame")
-content.Size = UDim2.new(1, -112, 1, -50)
-content.Position = UDim2.new(0, 106, 0, 42)
+content.Size = UDim2.new(1, -130, 1, -60)
+content.Position = UDim2.new(0, 122, 0, 52)
 content.BackgroundTransparency = 1
 content.BorderSizePixel = 0
 content.ScrollBarThickness = 3
 content.ScrollBarImageColor3 = ACCENT
+content.CanvasSize = UDim2.new(0, 0, 0, 0)
 content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-content.Parent = M
+content.Parent = Main
 
-local list = Instance.new("UIListLayout")
-list.Padding = UDim.new(0, 7)
-list.Parent = content
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = content
+
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 4)
+padding.PaddingLeft = UDim.new(0, 2)
+padding.PaddingRight = UDim.new(0, 6)
+padding.Parent = content
 
 local currentTab = nil
 local tabButtons = {}
 
 local function clearContent()
-	for _, c in ipairs(content:GetChildren()) do
-		if not c:IsA("UIListLayout") then c:Destroy() end
+	for _, child in ipairs(content:GetChildren()) do
+		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+			child:Destroy()
+		end
 	end
 end
 
 local function switchTab(name)
 	if currentTab == name then return end
 	currentTab = name
-	for n, btn in pairs(tabButtons) do
-		btn.BackgroundColor3 = (n == name) and ACCENT or BG_ELEMENT
-		btn.TextColor3 = (n == name) and TEXT_MAIN or TEXT_DIM
+	for id, btn in pairs(tabButtons) do
+		if id == name then
+			btn.BackgroundColor3 = ACCENT
+			btn.TextColor3 = TEXT_MAIN
+		else
+			btn.BackgroundColor3 = BG_BTN
+			btn.TextColor3 = TEXT_DIM
+		end
 	end
 	clearContent()
-	if name == "Character" then buildCharacterTab()
-	elseif name == "Desync" then buildDesyncTab()
-	elseif name == "Hitbox" then buildHitboxTab()
-	elseif name == "Auto" then buildAutomationTab() end
+	if name == "Main" then buildMain()
+	elseif name == "Character" then buildCharacter()
+	elseif name == "Visuals" then buildVisuals() end
 end
 
-local tabs = {
-	{id = "Character", label = "Character"},
-	{id = "Desync", label = "Desync"},
-	{id = "Hitbox", label = "Hitbox"},
-	{id = "Auto", label = "Auto"}
+local tabData = {
+	{id = "Main", text = "Main"},
+	{id = "Character", text = "Character"},
+	{id = "Visuals", text = "Visuals"}
 }
 
-for i, t in ipairs(tabs) do
+for i, t in ipairs(tabData) do
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -12, 0, 34)
-	btn.Position = UDim2.new(0, 6, 0, 8 + (i-1)*40)
-	btn.BackgroundColor3 = i == 1 and ACCENT or BG_ELEMENT
-	btn.Text = t.label
-	btn.TextColor3 = i == 1 and TEXT_MAIN or TEXT_DIM
+	btn.Position = UDim2.new(0, 6, 0, 8 + (i-1)*42)
+	btn.BackgroundColor3 = (i == 1) and ACCENT or BG_BTN
+	btn.Text = t.text
+	btn.TextColor3 = (i == 1) and TEXT_MAIN or TEXT_DIM
 	btn.Font = Enum.Font.GothamBold
 	btn.TextSize = 13
 	btn.AutoButtonColor = false
 	btn.Parent = sidebar
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 	tabButtons[t.id] = btn
-	btn.MouseButton1Click:Connect(function() switchTab(t.id) end)
+	btn.MouseButton1Click:Connect(function()
+		switchTab(t.id)
+	end)
 end
 
--- Helpers
-local function CreateToggle(parent, text, state, callback)
+-- ===================== UI HELPERS =====================
+local function makeToggle(text, default, callback)
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 34)
-	row.BackgroundColor3 = BG_PANEL
-	row.Parent = parent
+	row.Size = UDim2.new(1, -4, 0, 38)
+	row.BackgroundColor3 = BG_CARD
+	row.BorderSizePixel = 0
+	row.Parent = content
 	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -68, 1, 0)
-	label.Position = UDim2.new(0, 12, 0, 0)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = TEXT_SECOND
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 13
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = row
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -70, 1, 0)
+	lbl.Position = UDim2.new(0, 12, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = text
+	lbl.TextColor3 = TEXT_DIM
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextSize = 13
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = row
 
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 48, 0, 22)
-	btn.Position = UDim2.new(1, -56, 0.5, -11)
-	btn.BackgroundColor3 = BG_ELEMENT
+	btn.Size = UDim2.new(0, 48, 0, 24)
+	btn.Position = UDim2.new(1, -56, 0.5, -12)
+	btn.BackgroundColor3 = BG_BTN
 	btn.Text = "OFF"
 	btn.TextColor3 = TEXT_DIM
 	btn.Font = Enum.Font.GothamBold
@@ -328,476 +476,182 @@ local function CreateToggle(parent, text, state, callback)
 	btn.Parent = row
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-	local enabled = state
-	local function update()
-		btn.Text = enabled and "ON" or "OFF"
-		btn.BackgroundColor3 = enabled and ACCENT or BG_ELEMENT
-		btn.TextColor3 = enabled and TEXT_MAIN or TEXT_DIM
-		label.TextColor3 = enabled and TEXT_MAIN or TEXT_SECOND
+	local on = default
+	local function refresh()
+		btn.Text = on and "ON" or "OFF"
+		btn.BackgroundColor3 = on and ACCENT or BG_BTN
+		btn.TextColor3 = on and TEXT_MAIN or TEXT_DIM
+		lbl.TextColor3 = on and TEXT_MAIN or TEXT_DIM
 	end
-	update()
+	refresh()
 
 	btn.MouseButton1Click:Connect(function()
-		enabled = not enabled
-		update()
-		callback(enabled)
+		on = not on
+		refresh()
+		callback(on)
 	end)
 end
 
-local function CreateSlider(parent, text, min, max, default, callback, unit)
-	unit = unit or ""
+local function makeSlider(text, min, max, default, callback)
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 78)
-	row.BackgroundColor3 = BG_PANEL
-	row.Parent = parent
+	row.Size = UDim2.new(1, -4, 0, 70)
+	row.BackgroundColor3 = BG_CARD
+	row.BorderSizePixel = 0
+	row.Parent = content
 	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.55, 0, 0, 18)
-	label.Position = UDim2.new(0, 12, 0, 6)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = TEXT_SECOND
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 13
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = row
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0.55, 0, 0, 18)
+	lbl.Position = UDim2.new(0, 12, 0, 6)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = text
+	lbl.TextColor3 = TEXT_DIM
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextSize = 13
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = row
 
-	local valueLbl = Instance.new("TextLabel")
-	valueLbl.Size = UDim2.new(0, 50, 0, 18)
-	valueLbl.Position = UDim2.new(1, -62, 0, 6)
-	valueLbl.BackgroundTransparency = 1
-	valueLbl.Text = string.format("%.2f%s", default, unit)
-	valueLbl.TextColor3 = TEXT_MAIN
-	valueLbl.Font = Enum.Font.GothamBold
-	valueLbl.TextSize = 13
-	valueLbl.TextXAlignment = Enum.TextXAlignment.Right
-	valueLbl.Parent = row
+	local textBox = Instance.new("TextBox")
+	textBox.Size = UDim2.new(0, 58, 0, 22)
+	textBox.Position = UDim2.new(1, -70, 0, 5)
+	textBox.BackgroundColor3 = BG_BTN
+	textBox.Text = string.format("%.2f", default)
+	textBox.TextColor3 = TEXT_MAIN
+	textBox.Font = Enum.Font.GothamBold
+	textBox.TextSize = 13
+	textBox.ClearTextOnFocus = false
+	textBox.Parent = row
+	Instance.new("UICorner", textBox).CornerRadius = UDim.new(0, 6)
 
 	local bar = Instance.new("Frame")
-	bar.Size = UDim2.new(1, -24, 0, 6)
-	bar.Position = UDim2.new(0, 12, 0, 36)
-	bar.BackgroundColor3 = BG_ELEMENT
+	bar.Size = UDim2.new(1, -24, 0, 5)
+	bar.Position = UDim2.new(0, 12, 0, 42)
+	bar.BackgroundColor3 = BG_BTN
 	bar.Parent = row
 	Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
 
 	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
+	fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
 	fill.BackgroundColor3 = ACCENT
 	fill.Parent = bar
 	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
 	local knob = Instance.new("TextButton")
-	knob.Size = UDim2.new(0, 16, 0, 16)
-	knob.Position = UDim2.new((default-min)/(max-min), -8, 0.5, -8)
-	knob.BackgroundColor3 = TEXT_MAIN
+	knob.Size = UDim2.new(0, 14, 0, 14)
+	knob.Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	knob.Text = ""
 	knob.Parent = bar
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-	local input = Instance.new("TextBox")
-	input.Size = UDim2.new(0, 52, 0, 22)
-	input.Position = UDim2.new(1, -64, 0, 48)
-	input.BackgroundColor3 = BG_ELEMENT
-	input.Text = string.format("%.2f", default)
-	input.TextColor3 = TEXT_MAIN
-	input.Font = Enum.Font.GothamBold
-	input.TextSize = 12
-	input.TextXAlignment = Enum.TextXAlignment.Center
-	input.ClearTextOnFocus = false
-	input.Parent = row
-	Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
-
-	local currentVal = default
-	local dragging = false
-
-	local function set(val)
+	local function update(val)
 		val = math.clamp(val, min, max)
 		val = math.floor(val * 100 + 0.5) / 100
-		currentVal = val
 		local pct = (val - min) / (max - min)
 		fill.Size = UDim2.new(pct, 0, 1, 0)
-		knob.Position = UDim2.new(pct, -8, 0.5, -8)
-		valueLbl.Text = string.format("%.2f%s", val, unit)
-		input.Text = string.format("%.2f", val)
+		knob.Position = UDim2.new(pct, -7, 0.5, -7)
+		textBox.Text = string.format("%.2f", val)
 		callback(val)
 	end
 
-	knob.InputBegan:Connect(function(inputObj)
-		if inputObj.UserInputType == Enum.UserInputType.MouseButton1 or inputObj.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
+	local sliding = false
+	knob.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			sliding = true
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			sliding = false
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(i)
+		if sliding and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local pct = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+			update(min + pct * (max - min))
 		end
 	end)
 
-	UserInputService.InputEnded:Connect(function(inputObj)
-		if inputObj.UserInputType == Enum.UserInputType.MouseButton1 or inputObj.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(inputObj)
-		if dragging and (inputObj.UserInputType == Enum.UserInputType.MouseMovement or inputObj.UserInputType == Enum.UserInputType.Touch) then
-			local pct = math.clamp((inputObj.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-			set(min + pct * (max - min))
-		end
-	end)
-
-	input.FocusLost:Connect(function()
-		local num = tonumber(input.Text)
-		if num then set(num) else input.Text = string.format("%.2f", currentVal) end
-	end)
-end
-
--- ===== VISUAL ONLY SHIFTLOCK (Blue on jump, default on land) =====
-local shiftlockButtons = {} -- store original colors
-local BLUE_COLOR = Color3.fromRGB(0, 162, 255) -- typical Roblox shiftlock blue
-
-local function findShiftlockButtons()
-	shiftlockButtons = {}
-	for _, obj in ipairs(LP.PlayerGui:GetDescendants()) do
-		if obj:IsA("ImageButton") or obj:IsA("TextButton") then
-			local name = string.lower(obj.Name)
-			if name:find("shift") or name:find("lock") or name:find("mouse") or name:find("cameralock") then
-				-- Store original colors
-				shiftlockButtons[obj] = {
-					ImageColor3 = obj.ImageColor3,
-					BackgroundColor3 = obj.BackgroundColor3,
-					Image = obj:IsA("ImageButton") and obj.Image or nil
-				}
-			end
-		end
-	end
-end
-
-local function setShiftlockVisual(active)
-	for btn, original in pairs(shiftlockButtons) do
-		if btn and btn.Parent then
-			if active then
-				-- Turn blue
-				if btn:IsA("ImageButton") then
-					btn.ImageColor3 = BLUE_COLOR
-				end
-				btn.BackgroundColor3 = BLUE_COLOR
-			else
-				-- Restore original
-				if btn:IsA("ImageButton") and original.ImageColor3 then
-					btn.ImageColor3 = original.ImageColor3
-				end
-				if original.BackgroundColor3 then
-					btn.BackgroundColor3 = original.BackgroundColor3
-				end
-			end
-		end
-	end
-end
-
-local boostConnection
-local shiftlockJumpConnection
-local shiftlockStateConnection
-
-local function applyBoostJump(char)
-	if not char then return end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum then return end
-	if boostConnection then boostConnection:Disconnect() end
-	if boostEnabled then
-		boostConnection = hum.Jumping:Connect(function()
-			local root = char:FindFirstChild("HumanoidRootPart")
-			if root then
-				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + Vector3.new(0, 1, 0)
-				if hum.JumpPower < 60 then hum.JumpPower = 55 end
-			end
-		end)
-	end
-end
-
-local function setupShiftlock(char)
-	if not char then return end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum then return end
-
-	if shiftlockJumpConnection then shiftlockJumpConnection:Disconnect() end
-	if shiftlockStateConnection then shiftlockStateConnection:Disconnect() end
-
-	-- Find the buttons once
-	findShiftlockButtons()
-
-	shiftlockJumpConnection = hum.Jumping:Connect(function()
-		if not shiftlockEnabled then return end
-
-		-- Turn the shiftlock button blue
-		setShiftlockVisual(true)
-
-		-- Also face the camera direction
-		local root = char:FindFirstChild("HumanoidRootPart")
-		if root then
-			local look = C.CFrame.LookVector
-			local flat = Vector3.new(look.X, 0, look.Z)
-			if flat.Magnitude > 0.05 then
-				root.CFrame = CFrame.new(root.Position, root.Position + flat.Unit)
-			end
-		end
-	end)
-
-	-- When landing, turn it back to default
-	shiftlockStateConnection = hum.StateChanged:Connect(function(_, newState)
-		if newState == Enum.HumanoidStateType.Landed or newState == Enum.HumanoidStateType.Running then
-			setShiftlockVisual(false)
-		end
-	end)
-end
-
-local function cleanupShiftlock()
-	if shiftlockJumpConnection then shiftlockJumpConnection:Disconnect() end
-	if shiftlockStateConnection then shiftlockStateConnection:Disconnect() end
-	setShiftlockVisual(false) -- make sure it's reset
-end
-
--- Anti-Lag + Desync + Ranked + ESP (unchanged)
-local espBeams = {}
-local OriginalStates = {}
-local asyncConnection
-local lastTriggerTime = 0
-local MIN_INTERVAL = 0.5
-local BANDWIDTH_LOW = 1
-
-local function SaveOriginalState(obj)
-	if OriginalStates[obj] then return end
-	local s = {}
-	if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-		s.Rate, s.Lifetime, s.Enabled = obj.Rate, obj.Lifetime, obj.Enabled
-	elseif obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
-		s.Enabled = obj.Enabled
-	elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-		s.Enabled, s.Brightness = obj.Enabled, obj.Brightness
-	end
-	if next(s) then OriginalStates[obj] = s end
-end
-
-local function ApplyAntiLag()
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		pcall(function()
-			if obj:IsA("Fire") or obj:IsA("Smoke") then
-				SaveOriginalState(obj)
-				obj.Enabled = false
-			elseif obj:IsA("ParticleEmitter") then
-				SaveOriginalState(obj)
-				obj.Rate = math.max(obj.Rate * 0.25, 1)
-			elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-				SaveOriginalState(obj)
-				obj.Brightness = obj.Brightness * 0.35
-			end
-		end)
-	end
-end
-
-local function RestoreOriginal()
-	for obj, s in pairs(OriginalStates) do
-		pcall(function()
-			if s.Rate then obj.Rate = s.Rate end
-			if s.Lifetime then obj.Lifetime = s.Lifetime end
-			if s.Enabled ~= nil then obj.Enabled = s.Enabled end
-			if s.Brightness then obj.Brightness = s.Brightness end
-		end)
-	end
-	OriginalStates = {}
-end
-
-local function applyDesync(state)
-	pcall(function()
-		setfflag("PhysicsSenderMaxBandwidthBps", state and tostring(BANDWIDTH_LOW) or "999999")
-	end)
-end
-
-local function onJump(active)
-	if not asyncDesyncEnabled or not active then return end
-	local now = tick()
-	if now - lastTriggerTime < MIN_INTERVAL then return end
-	lastTriggerTime = now
-	applyDesync(true)
-	task.wait(ASYNC_COOLDOWN)
-	applyDesync(false)
-end
-
-local function setupAsyncDesync(char)
-	if asyncConnection then asyncConnection:Disconnect() end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then asyncConnection = hum.Jumping:Connect(onJump) end
-end
-
-local rankedEnabled = {style = false, yen = false, ability = false}
-local rankedLoopActive = false
-
-local function fireRankedReward(arg)
-	local remote = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("SeasonService"):WaitForChild("RF"):WaitForChild("RequestRankedReward")
-	pcall(function() remote:InvokeServer(arg) end)
-end
-
-local function rankedStealthLoop()
-	while rankedLoopActive do
-		if not (rankedEnabled.style or rankedEnabled.yen or rankedEnabled.ability) then
-			task.wait(0.5)
+	textBox.FocusLost:Connect(function()
+		local num = tonumber(textBox.Text)
+		if num then
+			update(num)
 		else
-			for _, info in ipairs({{name="style",arg=1},{name="yen",arg=2},{name="ability",arg=4}}) do
-				if rankedLoopActive and rankedEnabled[info.name] then
-					fireRankedReward(info.arg)
-					task.wait(3 + math.random()*1.6 - 0.8)
-				end
-			end
+			textBox.Text = string.format("%.2f", default)
 		end
-	end
-end
-
-local function updateRankedLoop()
-	if (rankedEnabled.style or rankedEnabled.yen or rankedEnabled.ability) and not rankedLoopActive then
-		rankedLoopActive = true
-		task.spawn(rankedStealthLoop)
-	end
-end
-
--- Tabs
-function buildCharacterTab()
-	CreateToggle(content, "Kazana Jump", boostEnabled, function(v)
-		boostEnabled = v
-		if LP.Character then
-			if v then applyBoostJump(LP.Character)
-			elseif boostConnection then boostConnection:Disconnect() end
-		end
-	end)
-
-	CreateToggle(content, "Auto Shiftlock", shiftlockEnabled, function(v)
-		shiftlockEnabled = v
-		if v then
-			if LP.Character then setupShiftlock(LP.Character) end
-		else
-			cleanupShiftlock()
-		end
-	end)
-
-	CreateToggle(content, "Direction ESP", espEnabled, function(v)
-		espEnabled = v
-		if not v then
-			for _, d in pairs(espBeams) do
-				pcall(function() d.Beam:Destroy() d.A0:Destroy() d.A1:Destroy() end)
-			end
-			table.clear(espBeams)
-		end
-	end)
-
-	CreateToggle(content, "Anti-Lag", antiLagEnabled, function(v)
-		antiLagEnabled = v
-		if v then ApplyAntiLag() else RestoreOriginal() end
 	end)
 end
 
-function buildDesyncTab()
-	CreateToggle(content, "Desync", asyncDesyncEnabled, function(v)
-		asyncDesyncEnabled = v
-		if v then
-			if LP.Character then setupAsyncDesync(LP.Character) end
-		else
-			if asyncConnection then asyncConnection:Disconnect() end
-			applyDesync(false)
-		end
-	end)
+local function makeWarning(text)
+	local warning = Instance.new("Frame")
+	warning.Size = UDim2.new(1, -4, 0, 52)
+	warning.BackgroundColor3 = Color3.fromRGB(90, 20, 20)
+	warning.BorderSizePixel = 0
+	warning.Parent = content
+	Instance.new("UICorner", warning).CornerRadius = UDim.new(0, 8)
 
-	CreateSlider(content, "Duration", 0.05, 1, desyncDuration, function(v)
-		desyncDuration = v
-		ASYNC_COOLDOWN = v
-		saveConfig()
-	end, "s")
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(255, 60, 60)
+	stroke.Thickness = 2
+	stroke.Parent = warning
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -16, 1, 0)
+	lbl.Position = UDim2.new(0, 8, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = text
+	lbl.TextColor3 = Color3.fromRGB(255, 120, 120)
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextSize = 12
+	lbl.TextWrapped = true
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.TextYAlignment = Enum.TextYAlignment.Center
+	lbl.Parent = warning
 end
 
-function buildHitboxTab()
-	CreateToggle(content, "Hitbox Extender", hitboxEnabled, function(v)
-		toggleHitboxExtender(v)
-	end)
-
-	CreateSlider(content, "Size", 1, 20, hitboxSize, function(v)
+-- Build Tabs
+function buildMain()
+	makeToggle("Hitbox Extender", hitboxEnabled, function(v) toggleHitbox(v) end)
+	makeSlider("Hitbox Size", 1, 15, hitboxSize, function(v)
 		hitboxSize = v
 		if hitboxEnabled then updateHitboxes(v) end
-		saveConfig()
+	end)
+	makeToggle("Max Serve", maxServeEnabled, function(v) setMaxServe(v) end)
+end
+
+function buildCharacter()
+	makeToggle("Auto Shiftlock", shiftlockEnabled, function(v)
+		shiftlockEnabled = v
+		if v and LP.Character then setupShiftlock(LP.Character) end
+	end)
+	makeToggle("Desync", asyncDesyncEnabled, function(v)
+		asyncDesyncEnabled = v
+		if v and LP.Character then setupDesync(LP.Character) end
+	end)
+	makeSlider("Desync Duration", 0.05, 1.00, desyncDuration, function(v)
+		desyncDuration = v
+	end)
+	makeWarning("⚠ WARNING  •  Recommended: 0.15\nHigher values look extremely obvious and increase ban risk!")
+end
+
+function buildVisuals()
+	makeToggle("Hitbox ESP", hitboxVisible, function(v)
+		hitboxVisible = v
+		updateHitboxes(hitboxSize)
+	end)
+	makeToggle("Direction ESP", espEnabled, function(v)
+		espEnabled = v
+		if not v then clearESP() end
 	end)
 end
 
-function buildAutomationTab()
-	CreateToggle(content, "Inf Style Spins", rankedEnabled.style, function(v)
-		rankedEnabled.style = v
-		updateRankedLoop()
-		if v then fireRankedReward(1) end
-	end)
-	CreateToggle(content, "Inf Yen", rankedEnabled.yen, function(v)
-		rankedEnabled.yen = v
-		updateRankedLoop()
-		if v then fireRankedReward(2) end
-	end)
-	CreateToggle(content, "Inf Ability Spins", rankedEnabled.ability, function(v)
-		rankedEnabled.ability = v
-		updateRankedLoop()
-		if v then fireRankedReward(4) end
-	end)
-end
-
--- Connections
-LP.CharacterAdded:Connect(function(ch)
-	task.wait(0.2)
-	if boostEnabled then applyBoostJump(ch) end
-	if shiftlockEnabled then setupShiftlock(ch) end
-	if asyncDesyncEnabled then setupAsyncDesync(ch) end
-	if hitboxEnabled then updateHitboxes(hitboxSize) end
+LP.CharacterAdded:Connect(function(char)
+	task.wait(0.35)
+	if shiftlockEnabled then setupShiftlock(char) end
+	if asyncDesyncEnabled then setupDesync(char) end
 end)
 
-RunService.RenderStepped:Connect(function()
-	if not espEnabled then return end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= LP and not (LP.Team and p.Team and LP.Team == p.Team) then
-			local char = p.Character
-			if char then
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				local torso = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-				if hum and hum.Health > 0 and torso then
-					local data = espBeams[p]
-					if not data then
-						local a0 = Instance.new("Attachment", Workspace.Terrain)
-						local a1 = Instance.new("Attachment", Workspace.Terrain)
-						local beam = Instance.new("Beam", Workspace.Terrain)
-						beam.Attachment0 = a0
-						beam.Attachment1 = a1
-						beam.Width0 = 0.35
-						beam.Width1 = 0.35
-						beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0))
-						beam.FaceCamera = true
-						data = {Beam = beam, A0 = a0, A1 = a1}
-						espBeams[p] = data
-					end
-					local dir = Vector3.new(torso.CFrame.LookVector.X, 0, torso.CFrame.LookVector.Z).Unit
-					data.A0.WorldPosition = torso.Position + dir * 0.6
-					data.A1.WorldPosition = torso.Position + dir * 55
-				end
-			end
-		end
-	end
-end)
-
-Workspace.DescendantAdded:Connect(function(obj)
-	if not antiLagEnabled then return end
-	task.wait(0.1)
-	pcall(function()
-		if obj:IsA("Fire") or obj:IsA("Smoke") then
-			SaveOriginalState(obj)
-			obj.Enabled = false
-		elseif obj:IsA("ParticleEmitter") then
-			SaveOriginalState(obj)
-			obj.Rate = math.max(obj.Rate * 0.25, 1)
-		elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-			SaveOriginalState(obj)
-			obj.Brightness = obj.Brightness * 0.35
-		end
-	end)
-end)
-
-task.spawn(function()
-	loadConfig()
-	switchTab("Character")
-	print("JHub ready - Visual Shiftlock only")
+task.defer(function()
+	switchTab("Main")
+	print("JOSSEPOPSIER loaded")
 end)
