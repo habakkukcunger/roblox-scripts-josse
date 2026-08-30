@@ -39,12 +39,13 @@ local TEXT_DIM   = Color3.fromRGB(140, 140, 155)
 
 -- ===================== STATES =====================
 local hitboxEnabled = false
-local hitboxSize = 5
+local hitboxSize = 2.3
 local hitboxVisible = true
 local hitboxConn = nil
 
 local maxServeEnabled = false
-local maxServeHook = nil
+local maxSpikeEnabled = false
+local maxHook = nil
 
 local shiftlockEnabled = false
 local asyncDesyncEnabled = false
@@ -56,7 +57,8 @@ local espEnabled = false
 local espBeams = {}
 
 local facingUntil = 0
-local facingConn, jumpConn = nil, nil
+local faceTime = 0.18
+local facingConn = nil
 
 -- ===================== FEATURES =====================
 local function updateHitboxes(scale)
@@ -74,7 +76,7 @@ local function updateHitboxes(scale)
 						ball.CFrame = base.CFrame
 						ball.Anchored = true
 						ball.CanCollide = false
-						ball.Material = Enum.Material.ForceField
+						ball.Material = Enum.Material.Plastic
 						ball.Color = Color3.fromRGB(80, 255, 120)
 						ball.Parent = model
 					end
@@ -82,7 +84,7 @@ local function updateHitboxes(scale)
 					ball.Size = Vector3.new(2, 2, 2) * scale
 				end
 				if ball then
-					ball.Transparency = hitboxVisible and 0.7 or 1
+					ball.Transparency = hitboxVisible and 0.85 or 1
 				end
 			else
 				if ball then ball:Destroy() end
@@ -117,28 +119,52 @@ local function toggleHitbox(state)
 	end
 end
 
-local function setMaxServe(state)
-	maxServeEnabled = state
-	if state and not maxServeHook then
-		maxServeHook = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-			local method = getnamecallmethod()
-			if maxServeEnabled and method == "InvokeServer" then
-				local name = tostring(self.Name):lower()
-				if name:find("serve") or name:find("toss") then
-					local args = {...}
-					for i = 1, #args do
-						if typeof(args[i]) == "number" and args[i] < 100 then
-							args[i] = 100
-						end
-					end
-					return maxServeHook(self, unpack(args))
+-- ===================== MAX SERVE + AUTO TSH MAX SPIKE =====================
+local function setupMaxHook()
+	if maxHook then return end
+
+	maxHook = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+		local method = getnamecallmethod()
+		local args = {...}
+
+		if method == "InvokeServer" then
+			local name = tostring(self.Name)
+
+			if maxServeEnabled and name == "Serve" then
+				if typeof(args[2]) == "number" then
+					args[2] = 0.94 + math.random() * 0.05
 				end
+				return maxHook(self, unpack(args))
 			end
-			return maxServeHook(self, ...)
-		end))
-	end
+
+			if maxSpikeEnabled and name == "Interact" then
+				if typeof(args[1]) == "table" then
+					local data = args[1]
+					if data.Move == "Spike" then
+						local power = 0.93 + math.random() * 0.05
+						data.Charge = power
+						data.SpecialCharge = power
+					end
+				end
+				return maxHook(self, unpack(args))
+			end
+		end
+
+		return maxHook(self, ...)
+	end))
 end
 
+local function setMaxServe(state)
+	maxServeEnabled = state
+	if state then setupMaxHook() end
+end
+
+local function setMaxSpike(state)
+	maxSpikeEnabled = state
+	if state then setupMaxHook() end
+end
+
+-- ===================== DESYNC =====================
 local function applyDesync(state)
 	pcall(function()
 		setfflag("PhysicsSenderMaxBandwidthBps", state and "1" or "999999")
@@ -164,29 +190,49 @@ local function setupDesync(char)
 	end
 end
 
+-- ===================== IMPROVED AUTO SHIFTLOCK =====================
 local function setupShiftlock(char)
 	if facingConn then facingConn:Disconnect() end
-	if jumpConn then jumpConn:Disconnect() end
 
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char:WaitForChild("Humanoid", 3)
+	local root = char:WaitForChild("HumanoidRootPart", 3)
 	if not hum or not root then return end
 
 	facingConn = RunService.RenderStepped:Connect(function()
-		if tick() < facingUntil and shiftlockEnabled and root.Parent then
+		if not shiftlockEnabled or not root.Parent then return end
+
+		if tick() < facingUntil then
 			local look = Camera.CFrame.LookVector
 			local flat = Vector3.new(look.X, 0, look.Z)
-			if flat.Magnitude > 0.1 then
+			if flat.Magnitude > 0.05 then
 				root.CFrame = CFrame.new(root.Position, root.Position + flat.Unit)
 			end
 		end
 	end)
 
-	jumpConn = hum.Jumping:Connect(function()
-		if shiftlockEnabled then
-			facingUntil = tick() + 0.15
+	hum.StateChanged:Connect(function(_, new)
+		if shiftlockEnabled and (new == Enum.HumanoidStateType.Jumping or new == Enum.HumanoidStateType.Freefall) then
+			facingUntil = tick() + faceTime
 		end
 	end)
+end
+
+-- ===================== DIRECTION ESP =====================
+local function getTiltAmount(root, hum)
+	if not root or not hum then return 0 end
+
+	local moveDir = hum.MoveDirection
+	if moveDir.Magnitude < 0.1 then return 0 end
+
+	local look = root.CFrame.LookVector
+	local flatLook = Vector3.new(look.X, 0, look.Z)
+	if flatLook.Magnitude < 0.1 then return 0 end
+	flatLook = flatLook.Unit
+
+	local right = Vector3.new(flatLook.Z, 0, -flatLook.X)
+	local sideAmount = moveDir:Dot(right)
+
+	return math.clamp(sideAmount * 1.6, -1, 1)
 end
 
 local function clearESP()
@@ -204,39 +250,73 @@ RunService.RenderStepped:Connect(function()
 	if not espEnabled then return end
 
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LP then
-			local char = player.Character
-			if char then
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")
-				
-				if hum and hum.Health > 0 and root then
-					local data = espBeams[player]
-					if not data then
-						local a0 = Instance.new("Attachment")
-						a0.Parent = Workspace.Terrain
-						local a1 = Instance.new("Attachment")
-						a1.Parent = Workspace.Terrain
-						local beam = Instance.new("Beam")
-						beam.Attachment0 = a0
-						beam.Attachment1 = a1
-						beam.Width0 = 0.35
-						beam.Width1 = 0.35
-						beam.Color = ColorSequence.new(Color3.fromRGB(255, 60, 60))
-						beam.FaceCamera = true
-						beam.Parent = Workspace.Terrain
-						data = {Beam = beam, A0 = a0, A1 = a1}
-						espBeams[player] = data
-					end
+		if player.Team == LP.Team then
+			if espBeams[player] then
+				pcall(function()
+					espBeams[player].Beam:Destroy()
+					espBeams[player].A0:Destroy()
+					espBeams[player].A1:Destroy()
+				end)
+				espBeams[player] = nil
+			end
+			continue
+		end
 
-					local look = root.CFrame.LookVector
-					local dir = Vector3.new(look.X, 0, look.Z)
-					if dir.Magnitude > 0.05 then
-						dir = dir.Unit
-						data.A0.WorldPosition = root.Position + dir * 0.7
-						data.A1.WorldPosition = root.Position + dir * 50
-					end
+		local char = player.Character
+		if char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")
+
+			if hum and hum.Health > 0 and root then
+				local data = espBeams[player]
+
+				if not data then
+					local a0 = Instance.new("Attachment")
+					a0.Parent = Workspace.Terrain
+					local a1 = Instance.new("Attachment")
+					a1.Parent = Workspace.Terrain
+
+					local beam = Instance.new("Beam")
+					beam.Attachment0 = a0
+					beam.Attachment1 = a1
+					beam.Width0 = 0.45
+					beam.Width1 = 0.45
+					beam.FaceCamera = true
+					beam.LightEmission = 0.4
+					beam.Parent = Workspace.Terrain
+
+					data = {Beam = beam, A0 = a0, A1 = a1}
+					espBeams[player] = data
 				end
+
+				local look = root.CFrame.LookVector
+				local dir = Vector3.new(look.X, 0, look.Z)
+				if dir.Magnitude < 0.05 then
+					dir = Vector3.new(0, 0, -1)
+				else
+					dir = dir.Unit
+				end
+
+				local state = hum:GetState()
+				local inAir = state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall
+
+				local tilt = getTiltAmount(root, hum)
+
+				if inAir and math.abs(tilt) > 0.22 then
+					local angle = math.rad(-tilt * 13)
+					local cos, sin = math.cos(angle), math.sin(angle)
+
+					local newX = dir.X * cos - dir.Z * sin
+					local newZ = dir.X * sin + dir.Z * cos
+					dir = Vector3.new(newX, 0, newZ).Unit
+
+					data.Beam.Color = ColorSequence.new(Color3.fromRGB(0, 140, 255))
+				else
+					data.Beam.Color = ColorSequence.new(Color3.fromRGB(200, 30, 30))
+				end
+
+				data.A0.WorldPosition = root.Position + dir * 0.7
+				data.A1.WorldPosition = root.Position + dir * 60
 			end
 		end
 	end
@@ -612,11 +692,12 @@ end
 -- Build Tabs
 function buildMain()
 	makeToggle("Hitbox Extender", hitboxEnabled, function(v) toggleHitbox(v) end)
-	makeSlider("Hitbox Size", 1, 15, hitboxSize, function(v)
+	makeSlider("Hitbox Size", 1, 8, hitboxSize, function(v)
 		hitboxSize = v
 		if hitboxEnabled then updateHitboxes(v) end
 	end)
 	makeToggle("Max Serve", maxServeEnabled, function(v) setMaxServe(v) end)
+	makeToggle("Auto TSH Max Spike", maxSpikeEnabled, function(v) setMaxSpike(v) end)
 end
 
 function buildCharacter()
@@ -653,5 +734,5 @@ end)
 
 task.defer(function()
 	switchTab("Main")
-	print("JOSSEPOPSIER loaded")
+	print("JOSSEPOPSIER loaded - Improved Auto Shiftlock")
 end)
