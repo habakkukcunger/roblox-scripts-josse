@@ -39,7 +39,7 @@ local TEXT_DIM   = Color3.fromRGB(140, 140, 155)
 
 -- ===================== STATES =====================
 local hitboxEnabled = false
-local hitboxSize = 2.3
+local hitboxSize = 2.75
 local hitboxVisible = true
 local hitboxConn = nil
 
@@ -734,5 +734,5 @@ end)
 
 task.defer(function()
 	switchTab("Main")
-	print("JOSSEPOPSIER loaded - Improved Auto Shiftlock")
+	print("JOSSEPOPSIER loaded")
 end)
