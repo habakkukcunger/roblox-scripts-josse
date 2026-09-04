@@ -60,6 +60,122 @@ local facingUntil = 0
 local faceTime = 0.18
 local facingConn = nil
 
+-- Silent Spike
+local silentSpikeEnabled = false
+local silentSpikeGui = nil
+
+-- ===================== SILENT SPIKE =====================
+local function getBallId()
+	for _, obj in pairs(Workspace:GetChildren()) do
+		if obj.Name:match("^CLIENT_BALL") then
+			local id = tonumber(obj.Name:match("%d+"))
+			if id then return id end
+		end
+	end
+	return nil
+end
+
+local function doSilentSpike()
+	local ballId = getBallId()
+	if not ballId then return end
+
+	local look = Camera.CFrame.LookVector
+	local lookFlat = Vector3.new(look.X, 0, look.Z)
+	if lookFlat.Magnitude > 0.001 then
+		lookFlat = lookFlat.Unit
+	else
+		lookFlat = Vector3.new(0, 0, -1)
+	end
+
+	local Interact = ReplicatedStorage.Packages._Index["sleitnick_knit@1.7.0"].knit.Services.BallService.RF.Interact
+
+	pcall(function()
+		Interact:InvokeServer({
+			Charge = 1,
+			Move = "Spike",
+			SpecialCharge = 0,
+			TiltDirection = Vector3.yAxis,
+			LookVector = lookFlat,
+			MoveDirection = Vector3.zero,
+			ClientCanRunSpecial = false,
+			From = "Client",
+			Timestamp = workspace:GetServerTimeNow(),
+			BallId = ballId,
+			CustomClient = {}
+		})
+	end)
+end
+
+local function createSilentSpikeButton()
+	if silentSpikeGui then silentSpikeGui:Destroy() end
+
+	silentSpikeGui = Instance.new("ScreenGui")
+	silentSpikeGui.Name = "SilentSpikeBtn"
+	silentSpikeGui.ResetOnSpawn = false
+	silentSpikeGui.Parent = PG
+
+	local MainBtn = Instance.new("Frame")
+	MainBtn.Size = UDim2.new(0, 150, 0, 48)
+	MainBtn.Position = UDim2.new(0.5, -75, 0.75, 0)
+	MainBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 70)
+	MainBtn.BorderSizePixel = 0
+	MainBtn.Active = true
+	MainBtn.Parent = silentSpikeGui
+	Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 10)
+
+	local Btn = Instance.new("TextButton")
+	Btn.Size = UDim2.new(1, 0, 1, 0)
+	Btn.BackgroundTransparency = 1
+	Btn.Text = "SPIKE BALL"
+	Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Btn.Font = Enum.Font.GothamBold
+	Btn.TextSize = 16
+	Btn.Parent = MainBtn
+
+	Btn.MouseButton1Click:Connect(doSilentSpike)
+
+	-- Non-snapping drag
+	local dragging = false
+	local dragInput, dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		MainBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+
+	MainBtn.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = MainBtn.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	MainBtn.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
+
+local function destroySilentSpikeButton()
+	if silentSpikeGui then
+		silentSpikeGui:Destroy()
+		silentSpikeGui = nil
+	end
+end
+
 -- ===================== FEATURES =====================
 local function updateHitboxes(scale)
 	for _, model in ipairs(Workspace:GetChildren()) do
@@ -698,6 +814,14 @@ function buildMain()
 	end)
 	makeToggle("Max Serve", maxServeEnabled, function(v) setMaxServe(v) end)
 	makeToggle("Auto TSH Max Spike", maxSpikeEnabled, function(v) setMaxSpike(v) end)
+	makeToggle("Silent Spike Button", silentSpikeEnabled, function(v)
+		silentSpikeEnabled = v
+		if v then
+			createSilentSpikeButton()
+		else
+			destroySilentSpikeButton()
+		end
+	end)
 end
 
 function buildCharacter()
@@ -734,5 +858,5 @@ end)
 
 task.defer(function()
 	switchTab("Main")
-	print("JOSSEPOPSIER loaded")
+	print("JOSSEPOPSIER loaded - Silent Spike added")
 end)
